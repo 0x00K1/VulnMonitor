@@ -1,25 +1,12 @@
-# Ignore Maven output folders
 /target/
-
-# Ignore Eclipse specific files
 .classpath
 .project
 .settings/
-
-# Ignore IntelliJ IDEA project files (if applicable)
 .idea/
 *.iml
-
-# Ignore build output and logs
 *.log
-
-# Ignore OS specific files
 .DS_Store
 Thumbs.db
-
-# Ignore compiled class files
 *.class
-
-# Ignore any temporary or backup files
 *.bak
 *.tmp

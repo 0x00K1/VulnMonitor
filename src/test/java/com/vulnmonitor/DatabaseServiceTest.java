@@ -5,9 +5,9 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public class DatabaseServiceTest {
-	 private static final String DB_URL = "jdbc:mysql://localhost:3306/vulnmonitor";
-	    private static final String DB_USER = "root";
-	    private static final String DB_PASSWORD = "#VulnMonitor01";
+	 private static final String DB_URL = "";
+	    private static final String DB_USER = "";
+	    private static final String DB_PASSWORD = "";
 
 	    public static void main(String[] args) {
 	        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
