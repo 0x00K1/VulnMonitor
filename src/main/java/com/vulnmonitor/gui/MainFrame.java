@@ -2,9 +2,9 @@ package com.vulnmonitor.gui;
 
 import com.vulnmonitor.model.CVE;
 import com.vulnmonitor.model.User;
-import com.vulnmonitor.model.UserSettings;
 import com.vulnmonitor.model.UserFilters;
 import com.vulnmonitor.model.UserAlerts;
+import com.vulnmonitor.model.UserSettings;
 import com.vulnmonitor.services.CVEFetcher;
 import com.vulnmonitor.services.DatabaseService;
 import com.vulnmonitor.utils.Filters;
@@ -56,9 +56,9 @@ public class MainFrame extends JFrame {
     private DatabaseService databaseService;  // Database service instance
     private String lastModEndDate; // Store the last modification end date
     private User user;
-    private UserSettings settings;
     private UserFilters filters;
     private UserAlerts alerts;
+    private UserSettings settings;
 
     /**
      * Constructor to set up the main frame.
@@ -67,12 +67,6 @@ public class MainFrame extends JFrame {
         databaseService = new DatabaseService();  // Initialize the database service
         
         // Example . .
-        settings = new UserSettings(
-                true,
-                new Date(),
-                true,
-                true
-        );
         filters = new UserFilters(
                 "ALL",
                 "High",
@@ -81,14 +75,20 @@ public class MainFrame extends JFrame {
         );
         alerts = new UserAlerts(
         );
+        settings = new UserSettings(
+                true,
+                new Date(),
+                true,
+                true
+        );
         user = new User(
                 123,
                 "kun",
                 "kun@java.com",
                 "$NULLER01",
-                settings,
                 filters,
-                alerts
+                alerts,
+                settings
         );
         // .
 

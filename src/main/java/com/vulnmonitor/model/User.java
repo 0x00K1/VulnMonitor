@@ -5,19 +5,20 @@ public class User {
     private String username;
     private String email;
     private String password;
-    private UserSettings userSettings;  // Composition: User has UserSettings
     private UserFilters userFilters;    // Composition: User has UserFilters
     private UserAlerts userAlerts;    	// Composition: User has UserAlerts
+    private UserSettings userSettings;  // Composition: User has UserSettings
 
     // Constructor
     public User(int userId, String username, String email, String password, 
-                UserSettings userSettings, UserFilters userFilters, UserAlerts userAlerts) {
+                UserFilters userFilters, UserAlerts userAlerts, UserSettings userSettings) {
         this.userId = userId;
         this.username = username;
         this.email = email;
         this.password = password;
-        this.userSettings = userSettings;
         this.userFilters = userFilters;
+        this.userAlerts = userAlerts;
+        this.userSettings = userSettings;
     }
 
     // Getter methods
@@ -80,8 +81,8 @@ public class User {
                 "\nUsername: " + username +
                 "\nEmail: " + email +
                 "\nPassword: " + password +
-                "\nSettings: \n" + userSettings.getUserSettings() +  // Include settings
                 "\nFilters: \n" + userFilters.getFiltersInfo() +  // Include filters
-                "\nAlerts: \n" + userAlerts.getAlertsInfo();  // Include Alerts
+                "\nAlerts: \n" + userAlerts.getAlertsInfo() +  // Include Alerts
+                "\nSettings: \n" + userSettings.getUserSettings(); // Include settings
     }
 }
