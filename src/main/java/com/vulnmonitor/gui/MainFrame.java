@@ -4,6 +4,7 @@ import com.vulnmonitor.model.CVE;
 import com.vulnmonitor.model.User;
 import com.vulnmonitor.model.UserSettings;
 import com.vulnmonitor.model.UserFilters;
+import com.vulnmonitor.model.UserAlerts;
 import com.vulnmonitor.services.CVEFetcher;
 import com.vulnmonitor.services.DatabaseService;
 import com.vulnmonitor.utils.Filters;
@@ -57,6 +58,7 @@ public class MainFrame extends JFrame {
     private User user;
     private UserSettings settings;
     private UserFilters filters;
+    private UserAlerts alerts;
 
     /**
      * Constructor to set up the main frame.
@@ -77,13 +79,16 @@ public class MainFrame extends JFrame {
                 Arrays.asList("Microsoft Office", "Chrome"),
                 true
         );
+        alerts = new UserAlerts(
+        );
         user = new User(
                 123,
                 "kun",
                 "kun@java.com",
                 "$NULLER01",
                 settings,
-                filters
+                filters,
+                alerts
         );
         // .
 

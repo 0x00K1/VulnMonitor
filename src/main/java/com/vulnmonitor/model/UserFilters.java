@@ -51,7 +51,7 @@ public class UserFilters {
     }
 
     // Method to get formatted filter information
-    public String getFilterInfo() {
+    public String getFiltersInfo() {
         return "OS Filter: " + osFilter +
                 "\nSeverity Filter: " + severityFilter +
                 "\nProduct Filters: " + String.join(", ", productFilters) +

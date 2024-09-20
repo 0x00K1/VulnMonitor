@@ -7,10 +7,11 @@ public class User {
     private String password;
     private UserSettings userSettings;  // Composition: User has UserSettings
     private UserFilters userFilters;    // Composition: User has UserFilters
+    private UserAlerts userAlerts;    	// Composition: User has UserAlerts
 
     // Constructor
     public User(int userId, String username, String email, String password, 
-                UserSettings userSettings, UserFilters userFilters) {
+                UserSettings userSettings, UserFilters userFilters, UserAlerts userAlerts) {
         this.userId = userId;
         this.username = username;
         this.email = email;
@@ -43,6 +44,10 @@ public class User {
     public UserFilters getUserFilters() {
         return userFilters;
     }
+    
+    public UserAlerts getUserAlerts() {
+        return userAlerts;
+    }
 
     // Setter methods
     public void setUsername(String username) {
@@ -64,6 +69,10 @@ public class User {
     public void setUserFilters(UserFilters userFilters) {
         this.userFilters = userFilters;
     }
+    
+    public void setUserAlerts(UserAlerts userAlerts) {
+        this.userAlerts = userAlerts;
+    }
 
     // Method to get basic user information
     public String getUserInfo() {
@@ -72,6 +81,7 @@ public class User {
                 "\nEmail: " + email +
                 "\nPassword: " + password +
                 "\nSettings: \n" + userSettings.getUserSettings() +  // Include settings
-                "\nFilters: \n" + userFilters.getFilterInfo();  // Include filters
+                "\nFilters: \n" + userFilters.getFiltersInfo() +  // Include filters
+                "\nAlerts: \n" + userAlerts.getAlertsInfo();  // Include Alerts
     }
 }
