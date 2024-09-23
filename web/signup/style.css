@@ -1,0 +1,39 @@
+@layer base {
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--background);
+      color: var(--foreground);
+    }
+  
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+  
+    button:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--ring);
+    }
+  }
+  
+  /* Custom styles for button hover */
+  button:hover {
+    background-color: rgba(29, 78, 216, 0.9);
+    cursor: pointer;
+  }
+  
+  /* Input field error styling */
+  .error-input {
+    border-color: red;
+  }
+  
+  .error-text {
+    color: red;
+    font-size: 0.9rem;
+  }
+  
+  /* Form card box shadow */
+  .shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }   
