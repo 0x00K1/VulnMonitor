@@ -429,7 +429,7 @@ public class MainFrame extends JFrame {
      * Fetches the CVE data in a separate thread and updates progress bar.
      */
     private void startCVEFetching() {
-        SwingWorker<Void, Integer> worker = new SwingWorker<>() {
+        SwingWorker<Void, Integer> worker = new SwingWorker<Void, Integer>() {
             @Override
             protected Void doInBackground() throws Exception {
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
