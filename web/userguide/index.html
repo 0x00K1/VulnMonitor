@@ -1,0 +1,174 @@
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+		<script src="https://unpkg.com/unlazy@0.11.3/dist/unlazy.with-hashing.iife.js" defer init></script>
+		<script type="text/javascript">
+			window.tailwind.config = {
+				darkMode: ['class'],
+				theme: {
+					extend: {
+						colors: {
+							border: 'hsl(var(--border))',
+							input: 'hsl(var(--input))',
+							ring: 'hsl(var(--ring))',
+							background: 'hsl(var(--background))',
+							foreground: 'hsl(var(--foreground))',
+							primary: {
+								DEFAULT: 'hsl(var(--primary))',
+								foreground: 'hsl(var(--primary-foreground))'
+							},
+							secondary: {
+								DEFAULT: 'hsl(var(--secondary))',
+								foreground: 'hsl(var(--secondary-foreground))'
+							},
+							destructive: {
+								DEFAULT: 'hsl(var(--destructive))',
+								foreground: 'hsl(var(--destructive-foreground))'
+							},
+							muted: {
+								DEFAULT: 'hsl(var(--muted))',
+								foreground: 'hsl(var(--muted-foreground))'
+							},
+							accent: {
+								DEFAULT: 'hsl(var(--accent))',
+								foreground: 'hsl(var(--accent-foreground))'
+							},
+							popover: {
+								DEFAULT: 'hsl(var(--popover))',
+								foreground: 'hsl(var(--popover-foreground))'
+							},
+							card: {
+								DEFAULT: 'hsl(var(--card))',
+								foreground: 'hsl(var(--card-foreground))'
+							},
+						},
+					}
+				}
+			}
+		</script>
+		<style type="text/tailwindcss">
+			@layer base {
+				:root {
+					--background: 0 0% 100%;
+--foreground: 240 10% 3.9%;
+--card: 0 0% 100%;
+--card-foreground: 240 10% 3.9%;
+--popover: 0 0% 100%;
+--popover-foreground: 240 10% 3.9%;
+--primary: 240 5.9% 10%;
+--primary-foreground: 0 0% 98%;
+--secondary: 240 4.8% 95.9%;
+--secondary-foreground: 240 5.9% 10%;
+--muted: 240 4.8% 95.9%;
+--muted-foreground: 240 3.8% 46.1%;
+--accent: 240 4.8% 95.9%;
+--accent-foreground: 240 5.9% 10%;
+--destructive: 0 84.2% 60.2%;
+--destructive-foreground: 0 0% 98%;
+--border: 240 5.9% 90%;
+--input: 240 5.9% 90%;
+--ring: 240 5.9% 10%;
+--radius: 0.5rem;
+				}
+				.dark {
+					--background: 240 10% 3.9%;
+--foreground: 0 0% 98%;
+--card: 240 10% 3.9%;
+--card-foreground: 0 0% 98%;
+--popover: 240 10% 3.9%;
+--popover-foreground: 0 0% 98%;
+--primary: 0 0% 98%;
+--primary-foreground: 240 5.9% 10%;
+--secondary: 240 3.7% 15.9%;
+--secondary-foreground: 0 0% 98%;
+--muted: 240 3.7% 15.9%;
+--muted-foreground: 240 5% 64.9%;
+--accent: 240 3.7% 15.9%;
+--accent-foreground: 0 0% 98%;
+--destructive: 0 62.8% 30.6%;
+--destructive-foreground: 0 0% 98%;
+--border: 240 3.7% 15.9%;
+--input: 240 3.7% 15.9%;
+--ring: 240 4.9% 83.9%;
+				}
+			}
+		</style>
+  </head>
+  <body>
+    <div class="bg-background text-foreground p-6 space-y-8">
+  <header class="text-center">
+    <h1 class="text-4xl font-bold">VulnMonitor User Guide</h1>
+    <p class="text-muted-foreground">Your comprehensive guide to mastering VulnMonitor</p>
+  </header>
+  <section id="introduction" class="space-y-4">
+    <h2 class="text-2xl font-semibold">Introduction</h2>
+    <p>Welcome to VulnMonitor, your go-to application for monitoring and managing vulnerabilities. This guide will help you get started and make the most out of VulnMonitor's features.</p>
+  </section>
+  <section id="installation" class="space-y-4">
+    <h2 class="text-2xl font-semibold">Installation</h2>
+    <p>Follow these steps to install VulnMonitor:</p>
+    <ol class="list-decimal pl-6 space-y-2">
+      <li>...</li>
+    </ol>
+  </section>
+  <section id="getting-started" class="space-y-4">
+    <h2 class="text-2xl font-semibold">Getting Started</h2>
+    <p>After installation, familiarize yourself with the main dashboard and navigation menu. Here are some initial steps to get you started:</p>
+    <ul class="list-disc pl-6 space-y-2">
+      <li>...</li>
+    </ul>
+  </section>
+  <section id="key-features" class="space-y-4">
+    <h2 class="text-2xl font-semibold">Key Features</h2>
+    <p>VulnMonitor offers a range of powerful features to help you stay on top of vulnerabilities:</p>
+    <ul class="list-disc pl-6 space-y-2">
+      <li>...</li>
+    </ul>
+  </section>
+  <section id="using-filters" class="space-y-4">
+    <h2 class="text-2xl font-semibold">Using Filters</h2>
+    <p>Filters help you narrow down the vulnerabilities to those that matter most to you. Here's how to use them:</p>
+    <ol class="list-decimal pl-6 space-y-2">
+      <li>...</li>
+    </ol>
+  </section>
+  <section id="viewing-cves" class="space-y-4">
+    <h2 class="text-2xl font-semibold">Viewing CVEs</h2>
+    <p>To view detailed information about a specific CVE:</p>
+    <ol class="list-decimal pl-6 space-y-2">
+      <li>...</li>
+    </ol>
+  </section>
+  <section id="alerts-notifications" class="space-y-4">
+    <h2 class="text-2xl font-semibold">Alerts and Notifications</h2>
+    <p>Stay informed with VulnMonitor's alert system:</p>
+    <ol class="list-decimal pl-6 space-y-2">
+      <li>...</li>
+    </ol>
+  </section>
+  <section id="user-settings" class="space-y-4">
+    <h2 class="text-2xl font-semibold">Managing User Settings</h2>
+    <p>Customize your VulnMonitor experience by managing your user settings:</p>
+    <ol class="list-decimal pl-6 space-y-2">
+      <li>...</li>
+    </ol>
+  </section>
+  <section id="troubleshooting" class="space-y-4">
+    <h2 class="text-2xl font-semibold">Troubleshooting</h2>
+    <p>If you encounter any issues, try the following troubleshooting steps:</p>
+    <ul class="list-disc pl-6 space-y-2">
+      <li>...</li>
+    </ul>
+  </section>
+  <section id="contact-support" class="space-y-4">
+    <h2 class="text-2xl font-semibold">Contact Support</h2>
+    <p>If you need further assistance, our support team is here to help:</p>
+    <ul class="list-disc pl-6 space-y-2">
+      <li>...</li>
+    </ul>
+  </section>
+</div>
+  </body>
+</html>
