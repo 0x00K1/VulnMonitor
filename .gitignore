@@ -10,3 +10,4 @@ Thumbs.db
 *.class
 *.bak
 *.tmp
+*.vscode/

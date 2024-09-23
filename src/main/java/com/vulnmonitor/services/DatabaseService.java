@@ -11,9 +11,9 @@ import java.util.List;
 
 public class DatabaseService {
 
-    private static final String DB_URL = "";
-    private static final String DB_USER = "";
-    private static final String DB_PASSWORD = "";
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/vulnmonitor";
+    private static final String DB_USER = "root";
+    private static final String DB_PASSWORD = "#VulnMonitor01";
 
     public void connect() {
         try {
@@ -29,52 +29,63 @@ public class DatabaseService {
         try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
             String checkSql = "SELECT COUNT(*) FROM cves WHERE cve_id = ?";
             String insertSql = "INSERT INTO cves (cve_id, description, severity, affected_product, platform, published_date, state, date_reserved, date_updated, cvss_score, cvss_vector, capec_description, cwe_description, cve_references, affected_versions, credits) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
+                               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    
             PreparedStatement checkStatement = connection.prepareStatement(checkSql);
             PreparedStatement insertStatement = connection.prepareStatement(insertSql);
-
+    
             SimpleDateFormat dateFormatWithMillis = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
             SimpleDateFormat dateFormatWithoutMillis = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
             SimpleDateFormat outputDateFormat = new SimpleDateFormat("yyyy-MM-dd");
-
+    
+            connection.setAutoCommit(false);  // Enable batch insert
+    
             for (CVE cve : cves) {
                 // Check if the CVE already exists
                 checkStatement.setString(1, cve.getCveId());
                 ResultSet resultSet = checkStatement.executeQuery();
                 resultSet.next();  // Move to the first row
-
+    
                 if (resultSet.getInt(1) == 0) {  // If the count is 0, the CVE doesn't exist
-                    // Insert the CVE
-                    insertStatement.setString(1, cve.getCveId());
-                    insertStatement.setString(2, cve.getDescription());
-                    insertStatement.setString(3, cve.getSeverity());
-                    insertStatement.setString(4, cve.getAffectedProduct());
-                    insertStatement.setString(5, cve.getPlatform());
-
-                    // Use the parseDate method to handle publishedDate, dateReserved, and dateUpdated
+                    // Truncate each field as per MySQL schema constraints
+                    String cveId = truncate(cve.getCveId(), 100);
+                    String severity = truncate(cve.getSeverity(), 50);
+                    String affectedProduct = truncate(cve.getAffectedProduct(), 255);
+                    String platform = truncate(cve.getPlatform(), 255);
+                    String state = truncate(cve.getState(), 50);
+                    String cvssScore = truncate(cve.getCvssScore(), 10);
+                    String cvssVector = truncate(cve.getCvssVector(), 255);
+    
+                    // Insert the CVE data
+                    insertStatement.setString(1, cveId);
+                    insertStatement.setString(2, cve.getDescription());  // No truncation for TEXT fields
+                    insertStatement.setString(3, severity);
+                    insertStatement.setString(4, affectedProduct);
+                    insertStatement.setString(5, platform);
                     insertStatement.setDate(6, parseDate(cve.getPublishedDate(), dateFormatWithMillis, dateFormatWithoutMillis, outputDateFormat));
+                    insertStatement.setString(7, state);
                     insertStatement.setDate(8, parseDate(cve.getDateReserved(), dateFormatWithMillis, dateFormatWithoutMillis, outputDateFormat));
                     insertStatement.setDate(9, parseDate(cve.getDateUpdated(), dateFormatWithMillis, dateFormatWithoutMillis, outputDateFormat));
-
-                    // Insert the remaining fields
-                    insertStatement.setString(7, cve.getState());
-                    insertStatement.setString(10, cve.getCvssScore());
-                    insertStatement.setString(11, cve.getCvssVector());
-                    insertStatement.setString(12, cve.getCapecDescription());
-                    insertStatement.setString(13, cve.getCweDescription());
-                    insertStatement.setString(14, String.join(",", cve.getReferences()));
-                    insertStatement.setString(15, String.join(",", cve.getAffectedVersions()));
-                    insertStatement.setString(16, String.join(",", cve.getCredits()));
-
-                    insertStatement.executeUpdate();
+                    insertStatement.setString(10, cvssScore);
+                    insertStatement.setString(11, cvssVector);
+                    insertStatement.setString(12, cve.getCapecDescription());  // No truncation for TEXT fields
+                    insertStatement.setString(13, cve.getCweDescription());  // No truncation for TEXT fields
+                    insertStatement.setString(14, String.join(",", cve.getReferences()));  // TEXT fields
+                    insertStatement.setString(15, String.join(",", cve.getAffectedVersions()));  // TEXT fields
+                    insertStatement.setString(16, String.join(",", cve.getCredits()));  // TEXT fields
+    
+                    insertStatement.addBatch();  // Add to batch
                 }
             }
+    
+            insertStatement.executeBatch();  // Execute batch insert
+            connection.commit();  // Commit transaction
+    
         } catch (SQLException e) {
             System.out.println("Error saving CVE data to the database.");
             e.printStackTrace();
         }
-    }
+    }    
 
     private java.sql.Date parseDate(String dateString, SimpleDateFormat dateFormatWithMillis, SimpleDateFormat dateFormatWithoutMillis, SimpleDateFormat outputDateFormat) {
         if (dateString == null || dateString.equalsIgnoreCase("N/A")) {
@@ -221,6 +232,13 @@ public class DatabaseService {
                 e.printStackTrace();
             }
         }
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() > maxLength ? value.substring(0, maxLength) : value;
     }
 
     // Helper method to extract CVE data from the ResultSet

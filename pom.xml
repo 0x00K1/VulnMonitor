@@ -53,4 +53,19 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <!-- Maven Compiler Plugin to specify Java version -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>22</source> <!-- Java version -->
+                    <target>22</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>
