@@ -10,7 +10,7 @@ import java.io.IOException;
 
 public class APIUtils {
 
-    private static final String API_KEY = "739c9c8c-f4cf-4ae4-88ca-23ebdf6cc788";
+    private static final String API_KEY = "";
 
     public String makeAPICall(String url) {
         String result = null;

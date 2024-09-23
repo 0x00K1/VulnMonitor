@@ -12,8 +12,8 @@ import java.util.List;
 public class DatabaseService {
 
     private static final String DB_URL = "jdbc:mysql://localhost:3306/vulnmonitor";
-    private static final String DB_USER = "root";
-    private static final String DB_PASSWORD = "#VulnMonitor01";
+    private static final String DB_USER = "";
+    private static final String DB_PASSWORD = "";
 
     public void connect() {
         try {
