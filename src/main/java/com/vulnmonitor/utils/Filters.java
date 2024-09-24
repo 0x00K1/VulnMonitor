@@ -46,6 +46,25 @@ public class Filters {
         return filteredCVE;
     }
 
+    // Method to filter by severity
+    public List<CVE> filterBySeverity(List<CVE> cves, String selectedSeverity) {
+        List<CVE> filteredCVE = new ArrayList<>();
+
+        // If the selectedSeverity is "All", return the full list (no filter)
+        if ("all".equalsIgnoreCase(selectedSeverity)) {
+            return cves;
+        }
+
+        // Apply filtering by severity
+        for (CVE cve : cves) {
+            if (cve.getSeverity() != null && cve.getSeverity().equalsIgnoreCase(selectedSeverity)) {
+                filteredCVE.add(cve);
+            }
+        }
+
+        return filteredCVE;
+    }
+    
     // Method to filter by affected products
     public List<CVE> filterByProduct(List<CVE> cves, List<String> selectedProducts) {
         List<CVE> filteredCVE = new ArrayList<>();
@@ -70,30 +89,11 @@ public class Filters {
         return filteredCVE;
     }
 
-    // Method to filter by severity
-    public List<CVE> filterBySeverity(List<CVE> cves, String selectedSeverity) {
-        List<CVE> filteredCVE = new ArrayList<>();
-
-        // If the selectedSeverity is "All", return the full list (no filter)
-        if ("all".equalsIgnoreCase(selectedSeverity)) {
-            return cves;
-        }
-
-        // Apply filtering by severity
-        for (CVE cve : cves) {
-            if (cve.getSeverity() != null && cve.getSeverity().equalsIgnoreCase(selectedSeverity)) {
-                filteredCVE.add(cve);
-            }
-        }
-
-        return filteredCVE;
-    }
-
     // Method to apply multiple filters
-    public List<CVE> applyFilters(List<CVE> cves, String selectedOS, List<String> selectedProducts, String selectedSeverity) {
+    public List<CVE> applyFilters(List<CVE> cves, String selectedOS, String selectedSeverity, List<String> selectedProducts) {
         List<CVE> filteredCVE = filterByOS(cves, selectedOS);
-        filteredCVE = filterByProduct(filteredCVE, selectedProducts);
         filteredCVE = filterBySeverity(filteredCVE, selectedSeverity);
+        filteredCVE = filterByProduct(filteredCVE, selectedProducts);
 
         return filteredCVE;
     }

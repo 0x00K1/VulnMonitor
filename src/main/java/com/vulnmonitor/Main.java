@@ -71,8 +71,8 @@ public class Main {
                 "$NULLER01",
                 new UserFilters(
                 "ALL",
-                Arrays.asList("ALL"),
                 "ALL",
+                Arrays.asList("ALL"),
                 true),
                 new UserAlerts(),
                 new UserSettings(
@@ -93,13 +93,10 @@ public class Main {
         }
     
         // Determine whether to show the progress bar
-        final boolean shouldShowProgressBar = isFirstFetch || isManualReload;
-        if (shouldShowProgressBar) {
+        final boolean ProgressBarAndButtons = isFirstFetch || isManualReload;
+        if (ProgressBarAndButtons) {
             mainFrame.showProgressBar("Loading . . .");
-        }
-    
-        if (isManualReload) {
-            mainFrame.setReloadButtonEnabled(false);
+            mainFrame.setButtonsStatus(false);
         }
     
         currentWorker = new SwingWorker<Void, Integer>() {
@@ -107,7 +104,7 @@ public class Main {
             protected Void doInBackground() throws Exception {
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
     
-                if (shouldShowProgressBar) publish(0); // Initialize progress
+                if (ProgressBarAndButtons) publish(0); // Initialize progress
                         
                 // Calculate the start of the current day (midnight)
                 Calendar calendar = Calendar.getInstance();
@@ -121,25 +118,25 @@ public class Main {
     
                 databaseService.resetCVEs(); // New CVEs ⟺ New Day :)
     
-                if (shouldShowProgressBar) publish(25); // Update progress to 25%
+                if (ProgressBarAndButtons) publish(25); // Update progress to 25%
     
                 try {
                     // Fetch the latest CVEs
                     List<CVE> cveList = new CVEFetcher().fetchLatestCVEs(lastModStartDate, lastModEndDate);
                     if (cveList != null && !cveList.isEmpty()) {
-                        if (shouldShowProgressBar) publish(50); // Update progress to 50%
+                        if (ProgressBarAndButtons) publish(50); // Update progress to 50%
 
                         // Save filtered CVEs in DB
                         databaseService.saveCVEData(cveList);
     
-                        if (shouldShowProgressBar) publish(100); // Update progress to 100%
+                        if (ProgressBarAndButtons) publish(100); // Update progress to 100%
     
                         TimeUnit.SECONDS.sleep(2); // Brief pause before updating UI
     
                         // Reload the CVE data in the GUI
                         reloadCVEData();
                     } else {
-                        if (shouldShowProgressBar) {
+                        if (ProgressBarAndButtons) {
                             publish(50);
                             publish(100);
                         }
@@ -147,7 +144,7 @@ public class Main {
                     }
                 } catch (ParseException e) {
                     e.printStackTrace();
-                    if (shouldShowProgressBar) {
+                    if (ProgressBarAndButtons) {
                         SwingUtilities.invokeLater(() -> {
                             mainFrame.showMessage("An error occurred while fetching CVE data.", "Fetch Error", JOptionPane.ERROR_MESSAGE);
                         });
@@ -162,7 +159,7 @@ public class Main {
     
             @Override
             protected void process(List<Integer> chunks) {
-                if (shouldShowProgressBar) {
+                if (ProgressBarAndButtons) {
                     for (int progress : chunks) {
                         mainFrame.updateProgressBar(progress);
                     }
@@ -171,9 +168,10 @@ public class Main {
     
             @Override
             protected void done() {
-                if (shouldShowProgressBar) mainFrame.hideProgressBar();
-                if (isManualReload) mainFrame.setReloadButtonEnabled(true);
-    
+                if (ProgressBarAndButtons) {
+                    mainFrame.hideProgressBar();
+                    mainFrame.setButtonsStatus(true);
+                }
                 // Schedule the next automatic fetch
                 scheduleNextAutomaticFetch();
             }
@@ -210,8 +208,8 @@ public class Main {
             List<CVE> filteredCVEs = new Filters().applyFilters(
                     databaseService.getCVEData() /* Fetch all CVEs from the database */,
                     user.getUserFilters().getOsFilter(),
-                    user.getUserFilters().getProductFilters(),
-                    user.getUserFilters().getSeverityFilter()
+                    user.getUserFilters().getSeverityFilter(),
+                    user.getUserFilters().getProductFilters()
             );
 
             // Update the CVE table in the UI with the filtered CVEs

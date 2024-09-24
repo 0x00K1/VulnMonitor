@@ -162,7 +162,6 @@ public class FiltersFrame extends JFrame {
         String selectedOS = osComboBox.getSelectedItem().toString();
         String selectedSeverity = severityComboBox.getSelectedItem().toString();
         List<String> selectedProducts = productList.getSelectedValuesList().stream()
-            .map(String::toLowerCase)
             .collect(Collectors.toList());
 
         // Retrieve include resolved option
@@ -171,8 +170,8 @@ public class FiltersFrame extends JFrame {
         // Update the user's filters
         user.setUserFilters(new UserFilters(
             selectedOS,
-            selectedProducts,
             selectedSeverity,
+            selectedProducts,
             includeResolved
         ));
 

@@ -371,8 +371,12 @@ public class MainFrame extends JFrame {
         progressBar.setVisible(false);
     }
     
-    public void setReloadButtonEnabled(boolean enabled) {
+    public void setButtonsStatus(boolean enabled) {
         reloadButton.setEnabled(enabled);
+        filterButton.setEnabled(enabled);
+        alertsButton.setEnabled(enabled);
+        settingsButton.setEnabled(enabled);
+        searchButton.setEnabled(enabled);
     }
 
     /**
