@@ -2,24 +2,13 @@ package com.vulnmonitor.gui;
 
 import com.vulnmonitor.model.CVE;
 import com.vulnmonitor.model.User;
-import com.vulnmonitor.model.UserFilters;
-import com.vulnmonitor.model.UserAlerts;
-import com.vulnmonitor.model.UserSettings;
-import com.vulnmonitor.services.CVEFetcher;
-import com.vulnmonitor.services.DatabaseService;
-import com.vulnmonitor.utils.Filters;
+import com.vulnmonitor.Main;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * MainFrame represents the main window of the VulnMonitor CVE Dashboard application.
@@ -52,45 +41,15 @@ public class MainFrame extends JFrame {
     private JTextField searchField;
     private JButton searchButton;
 
-    // Services
-    private DatabaseService databaseService;  // Database service instance
-    private String lastModEndDate; // Store the last modification end date
+    private Main controller;
     private User user;
-    private UserFilters filters;
-    private UserAlerts alerts;
-    private UserSettings settings;
 
     /**
      * Constructor to set up the main frame.
      */
-    public MainFrame() {
-        databaseService = new DatabaseService();  // Initialize the database service
-        
-        // Example . .
-        filters = new UserFilters(
-                "ALL",
-                "High",
-                Arrays.asList("Microsoft Office", "Chrome"),
-                true
-        );
-        alerts = new UserAlerts(
-        );
-        settings = new UserSettings(
-                true,
-                new Date(),
-                true,
-                true
-        );
-        user = new User(
-                123,
-                "kun",
-                "kun@java.com",
-                "$NULLER01",
-                filters,
-                alerts,
-                settings
-        );
-        // .
+    public MainFrame(Main controller, User user) {
+        this.controller = controller;
+        this.user = user;
 
         setTitle("VulnMonitor - CVE Dashboard");
         setSize(1200, 800);
@@ -99,11 +58,7 @@ public class MainFrame extends JFrame {
 
         initComponents();
 
-        // Initialize lastModEndDate with current date
-        lastModEndDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(new Date());
-
-        // Fetch CVE data in a separate thread
-        startCVEFetching();
+        setVisible(true);
     }
 
     /**
@@ -123,8 +78,6 @@ public class MainFrame extends JFrame {
 
         // Initialize SOUTH panel
         initSouthPanel();
-
-        setVisible(true);
     }
 
     /**
@@ -170,6 +123,9 @@ public class MainFrame extends JFrame {
     /**
      * Initializes the CENTER panel with CVE information table.
      */
+    /**
+     * Initializes the CENTER panel with CVE information table.
+     */
     private void initCenterPanel() {
         JPanel centerPanel = new JPanel(new BorderLayout());
         centerPanel.setBackground(new Color(60, 63, 65));  // Dark gray background
@@ -205,7 +161,7 @@ public class MainFrame extends JFrame {
                     int row = cveTable.getSelectedRow();
                     if (row != -1) {
                         String cveId = cveTableModel.getValueAt(row, 0).toString();  // Get CVE ID from the selected row
-                        showCVEInfo(cveId);  // Show CVE details
+                        controller.showCVEInfo(cveId);  // Ask controller to show CVE details
                     }
                 }
             }
@@ -329,7 +285,7 @@ public class MainFrame extends JFrame {
         reloadButton.setPreferredSize(new Dimension(120, 40));
         reloadButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         reloadButton.setMaximumSize(new Dimension(250, 40));
-        reloadButton.addActionListener(e -> startCVEFetching());  // Reload data when clicked
+        reloadButton.addActionListener(e -> controller.startCVEFetching(true));
         
         // Filters Button
         filterButton = new JButton("Filters");
@@ -337,7 +293,7 @@ public class MainFrame extends JFrame {
         filterButton.setPreferredSize(new Dimension(120, 40));
         filterButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         filterButton.setMaximumSize(new Dimension(250, 40));
-        filterButton.addActionListener(e -> showFilterFrame());  // Define the filter logic in this method
+        filterButton.addActionListener(e -> controller.showFilterFrame());  // Define the filter logic in this method
 
         // Alerts Button
         alertsButton = new JButton("Alerts");
@@ -345,7 +301,7 @@ public class MainFrame extends JFrame {
         alertsButton.setPreferredSize(new Dimension(120, 40));
         alertsButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         alertsButton.setMaximumSize(new Dimension(250, 40));
-        alertsButton.addActionListener(e -> showAlertsFrame());  // Define the alerts logic in this method
+        alertsButton.addActionListener(e -> controller.showAlertsFrame());  // Define the alerts logic in this method
         
         // Settings Button
         settingsButton = new JButton("Settings");
@@ -353,7 +309,7 @@ public class MainFrame extends JFrame {
         settingsButton.setPreferredSize(new Dimension(120, 40));
         settingsButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         settingsButton.setMaximumSize(new Dimension(250, 40));
-        settingsButton.addActionListener(e -> showSettingsFrame());  // Define the settings logic in this method
+        settingsButton.addActionListener(e -> controller.showSettingsFrame());  // Define the settings logic in this method
 
         eastPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Spacing between line and buttons
         eastPanel.add(reloadButton);
@@ -389,14 +345,9 @@ public class MainFrame extends JFrame {
         searchButton.addActionListener(e -> {
             String query = searchField.getText().trim();
             if (!query.isEmpty()) {
-                performSearch(query);
+                controller.performSearch(query);
             } else {
-                JOptionPane.showMessageDialog(
-                        MainFrame.this,
-                        "Please enter a CVE ID or keyword to search.",
-                        "Search Input Required",
-                        JOptionPane.WARNING_MESSAGE
-                );
+                showMessage("Please enter a CVE ID or keyword to search.", "Search Input Required", JOptionPane.WARNING_MESSAGE);
             }
         });
 
@@ -407,14 +358,80 @@ public class MainFrame extends JFrame {
         getContentPane().add(southPanel, BorderLayout.SOUTH);
     }
 
-    private void showCVEInfo(String cveId) {
-        CVE cve = databaseService.getCVEById(cveId);  // Fetch the CVE from the database
-        if (cve != null) {
-            CVEInfoFrame cveInfoFrame = new CVEInfoFrame(cve);  // Create a new frame with the CVE details
-            cveInfoFrame.setVisible(true);  // Show the frame
-        } else {
-            JOptionPane.showMessageDialog(this, "CVE details not found.", "Error", JOptionPane.ERROR_MESSAGE);
+    public void showProgressBar(String text) {
+        progressBar.setString(text);
+        progressBar.setVisible(true);
+    }
+    
+    public void updateProgressBar(int value) {
+        progressBar.setValue(value);
+    }
+    
+    public void hideProgressBar() {
+        progressBar.setVisible(false);
+    }
+    
+    public void setReloadButtonEnabled(boolean enabled) {
+        reloadButton.setEnabled(enabled);
+    }
+
+    /**
+     * Updates the CVE table with new data.
+     * @param cveList The list of CVEs to display.
+     */
+    public void updateCVETable(List<CVE> cveList) {
+        cveTableModel.setRowCount(0);  // Clear existing rows
+
+        int criticalCount = 0;
+        int highCount = 0;
+        int mediumCount = 0;
+        int lowCount = 0;
+
+        for (CVE cve : cveList) {
+            cveTableModel.addRow(new Object[]{
+                    cve.getCveId(),
+                    cve.getSeverity(),
+                    cve.getDescription()
+            });
+
+            // Count CVEs by severity
+            switch (cve.getSeverity().toLowerCase()) {
+                case "critical":
+                    criticalCount++;
+                    break;
+                case "high":
+                    highCount++;
+                    break;
+                case "medium":
+                    mediumCount++;
+                    break;
+                case "low":
+                    lowCount++;
+                    break;
+                default:
+                    // Handle any missing or "Not Ranked" severity if needed
+                    break;
+            }
         }
+
+        // Update the CVE count labels dynamically
+        criticalCveLabel.setText("Critical CVEs: " + criticalCount);
+        highCveLabel.setText("High CVEs: " + highCount);
+        mediumCveLabel.setText("Medium CVEs: " + mediumCount);
+        lowCveLabel.setText("Low CVEs: " + lowCount);
+
+        // Revalidate and repaint the table to ensure it's updated
+        cveTable.revalidate();
+        cveTable.repaint();
+    }
+
+    /**
+     * Displays detailed CVE information.
+     * @param cve The CVE to display.
+     */
+    public void showCVEInfo(CVE cve) {
+        CVEInfoFrame cveInfoFrame = new CVEInfoFrame(cve);  // Create a new frame with the CVE details
+        cveInfoFrame.setVisible(true);  // Show the frame
     }
 
     private JLabel createColoredLabel(String text, Color color) {
@@ -426,164 +443,12 @@ public class MainFrame extends JFrame {
     }
 
     /**
-     * Fetches the CVE data in a separate thread and updates progress bar.
+     * Shows a message dialog.
+     * @param message The message to display.
+     * @param title The title of the dialog.
+     * @param messageType The type of message (e.g., ERROR_MESSAGE).
      */
-    private void startCVEFetching() {
-        SwingWorker<Void, Integer> worker = new SwingWorker<Void, Integer>() {
-            @Override
-            protected Void doInBackground() throws Exception {
-                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-                progressBar.setVisible(true); // Show the progress bar when starting
-                progressBar.setValue(0);  // Reset progress
-                progressBar.setString("Loading . . .");
-
-                while (true) {
-                    CVEFetcher cveFetcher = new CVEFetcher(); // Fetch CVE data from the API
-                    Filters cveFilter = new Filters();
-
-                    // Calculate the start of the current day (midnight)
-                    Calendar calendar = Calendar.getInstance();
-                    calendar.set(Calendar.HOUR_OF_DAY, 0);
-                    calendar.set(Calendar.MINUTE, 0);
-                    calendar.set(Calendar.SECOND, 0);
-                    calendar.set(Calendar.MILLISECOND, 0);
-
-                    String lastModStartDate = dateFormat.format(calendar.getTime());  // Start of the current day
-                    lastModEndDate = dateFormat.format(new Date());  // Set to the current time
-
-                    databaseService.resetCVEs(); // New Day == New CVEs :)
-
-                    publish(25); // Update progress to 25%
-
-                    List<CVE> cveList;
-                    try {
-                        // Fetch the CVEs for the current day
-                        cveList = cveFetcher.fetchLatestCVEs(lastModStartDate, lastModEndDate);
-                        if (cveList != null && !cveList.isEmpty()) {
-                            publish(50); // Update progress to 50%
-                            databaseService.saveCVEData(cveFilter.filterByOS(cveList, user.getUserFilters().getOsFilter()));  // Save the filtered CVE data to the database
-                            publish(100); // Fetching done, update progress to 100%
-
-                            TimeUnit.SECONDS.sleep(2); // Wait to 2s before reload
-                            
-                            reloadCVEData();  // Reload the table data in the GUI
-                        } else {
-                        	publish(50);
-                            publish(100);
-                            TimeUnit.SECONDS.sleep(2);
-                        }
-                        done(); // All good :)
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
-
-                    TimeUnit.MINUTES.sleep(15);  // Delay before the next fetch
-                }
-            }
-
-            @Override
-            protected void process(List<Integer> chunks) {
-                for (int progress : chunks) {
-                    progressBar.setValue(progress);  // Update the progress bar as chunks are published
-                }
-            }
-
-            @Override
-            protected void done() {
-                progressBar.setVisible(false);  // Hide the progress bar when done
-            }
-        };
-
-        worker.execute(); // Run the background task
-    }
-
-    /**
-     * Reloads the CVE data from the database into the table.
-     */
-    private void reloadCVEData() {
-        SwingUtilities.invokeLater(() -> {
-            List<CVE> cveList = databaseService.getCVEData();  // Fetch from database
-            cveTableModel.setRowCount(0);  // Clear existing rows
-
-            int criticalCount = 0;
-            int highCount = 0;
-            int mediumCount = 0;
-            int lowCount = 0;
-
-            for (CVE cve : cveList) {
-                cveTableModel.addRow(new Object[]{
-                        cve.getCveId(),
-                        cve.getSeverity(),
-                        cve.getDescription()
-                });
-
-                // Count CVEs by severity
-                switch (cve.getSeverity().toLowerCase()) {
-                    case "critical":
-                        criticalCount++;
-                        break;
-                    case "high":
-                        highCount++;
-                        break;
-                    case "medium":
-                        mediumCount++;
-                        break;
-                    case "low":
-                        lowCount++;
-                        break;
-                    default:
-                        // Handle any missing or "Not Ranked" severity if needed, we use N/A
-                        break;
-                }
-            }
-
-            // Update the CVE count labels dynamically
-            criticalCveLabel.setText("Critical CVEs: " + criticalCount);
-            highCveLabel.setText("High CVEs: " + highCount);
-            mediumCveLabel.setText("Medium CVEs: " + mediumCount);
-            lowCveLabel.setText("Low CVEs: " + lowCount);
-
-            // Revalidate and repaint the table to ensure it's updated
-            cveTable.revalidate();
-            cveTable.repaint();
-        });
-    }
-
-    private void performSearch(String query) {
-        CVEFetcher cveFetcher = new CVEFetcher();
-        List<CVE> cveList = cveFetcher.SfetchCVEData(query);
-
-        if (cveList == null) {
-            JOptionPane.showMessageDialog(
-                this,
-                "An error occurred while searching for CVEs. Please try again later.",
-                "Search Error",
-                JOptionPane.ERROR_MESSAGE
-            );
-        } else if (cveList.isEmpty()) {
-            JOptionPane.showMessageDialog(
-                this,
-                "No CVEs found matching the query: " + query,
-                "Search Results",
-                JOptionPane.INFORMATION_MESSAGE
-            );
-        } else {
-            for (CVE cve : cveList) {
-                CVEInfoFrame cveInfoFrame = new CVEInfoFrame(cve);  // Create a new frame with the CVE details
-                cveInfoFrame.setVisible(true);  // Show the frame
-            }
-        }
-    }
-
-    private void showFilterFrame() {
-        JOptionPane.showMessageDialog(this, "Filter functionality will go here.", "Filters", JOptionPane.INFORMATION_MESSAGE);
-    }
-    
-    private void showAlertsFrame() {
-        JOptionPane.showMessageDialog(this, "Alerts functionality will go here.", "Alerts", JOptionPane.INFORMATION_MESSAGE);
-    }
-
-    private void showSettingsFrame() {
-        JOptionPane.showMessageDialog(this, "Settings functionality will go here.", "Settings", JOptionPane.INFORMATION_MESSAGE);
+    public void showMessage(String message, String title, int messageType) {
+        JOptionPane.showMessageDialog(this, message, title, messageType);
     }
 }
