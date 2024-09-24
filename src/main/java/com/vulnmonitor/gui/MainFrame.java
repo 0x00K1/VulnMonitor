@@ -393,7 +393,7 @@ public class MainFrame extends JFrame {
                     cve.getSeverity(),
                     cve.getDescription()
             });
-
+            
             // Count CVEs by severity
             switch (cve.getSeverity().toLowerCase()) {
                 case "critical":
@@ -413,6 +413,9 @@ public class MainFrame extends JFrame {
                     break;
             }
         }
+
+        // Update the selected OS label
+        osLabel.setText("Selected OS: " + user.getUserFilters().getOsFilter());
 
         // Update the CVE count labels dynamically
         criticalCveLabel.setText("Critical CVEs: " + criticalCount);

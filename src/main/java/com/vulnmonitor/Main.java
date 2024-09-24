@@ -1,5 +1,6 @@
 package com.vulnmonitor;
 
+import com.vulnmonitor.gui.FiltersFrame;
 import com.vulnmonitor.gui.MainFrame;
 import com.vulnmonitor.model.*;
 import com.vulnmonitor.services.*;
@@ -63,19 +64,6 @@ public class Main {
     private void initializeUser() {
 
         // As Example how the user logic works . .
-        // UserFilters filters = new UserFilters(
-        //         "ALL",
-        //         "High",
-        //         Arrays.asList("Microsoft Office", "Chrome"),
-        //         true
-        // );
-        // UserAlerts alerts = new UserAlerts();
-        // UserSettings settings = new UserSettings(
-        //         true,
-        //         new Date(),
-        //         true,
-        //         true
-        // );
         user = new User(
                 123,
                 "kun",
@@ -83,8 +71,8 @@ public class Main {
                 "$NULLER01",
                 new UserFilters(
                 "ALL",
-                "High",
-                Arrays.asList("Microsoft Office", "Chrome"),
+                Arrays.asList("ALL"),
+                "ALL",
                 true),
                 new UserAlerts(),
                 new UserSettings(
@@ -120,10 +108,7 @@ public class Main {
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
     
                 if (shouldShowProgressBar) publish(0); // Initialize progress
-    
-                CVEFetcher cveFetcher = new CVEFetcher();
-                Filters cveFilter = new Filters();
-    
+                        
                 // Calculate the start of the current day (midnight)
                 Calendar calendar = Calendar.getInstance();
                 calendar.set(Calendar.HOUR_OF_DAY, 0);
@@ -140,13 +125,12 @@ public class Main {
     
                 try {
                     // Fetch the latest CVEs
-                    List<CVE> cveList = cveFetcher.fetchLatestCVEs(lastModStartDate, lastModEndDate);
+                    List<CVE> cveList = new CVEFetcher().fetchLatestCVEs(lastModStartDate, lastModEndDate);
                     if (cveList != null && !cveList.isEmpty()) {
                         if (shouldShowProgressBar) publish(50); // Update progress to 50%
-    
-                        // Apply user OS filter and save CVEs
-                        List<CVE> filteredCVEs = cveFilter.filterByOS(cveList, user.getUserFilters().getOsFilter());
-                        databaseService.saveCVEData(filteredCVEs);
+
+                        // Save filtered CVEs in DB
+                        databaseService.saveCVEData(cveList);
     
                         if (shouldShowProgressBar) publish(100); // Update progress to 100%
     
@@ -221,8 +205,17 @@ public class Main {
      */
     public void reloadCVEData() {
         SwingUtilities.invokeLater(() -> {
-            List<CVE> cveList = databaseService.getCVEData();  // Fetch from database
-            mainFrame.updateCVETable(cveList);
+
+            // Apply the user's current filters to the CVE list
+            List<CVE> filteredCVEs = new Filters().applyFilters(
+                    databaseService.getCVEData() /* Fetch all CVEs from the database */,
+                    user.getUserFilters().getOsFilter(),
+                    user.getUserFilters().getProductFilters(),
+                    user.getUserFilters().getSeverityFilter()
+            );
+
+            // Update the CVE table in the UI with the filtered CVEs
+            mainFrame.updateCVETable(filteredCVEs);
         });
     }
 
@@ -258,9 +251,12 @@ public class Main {
         }
     }
 
-    // Placeholder methods for filters, alerts, and settings
+    /**
+     * Displays the FiltersFrame to allow the user to set filters.
+     */
     public void showFilterFrame() {
-        mainFrame.showMessage("Filter functionality will go here.", "Filters", JOptionPane.INFORMATION_MESSAGE);
+        FiltersFrame filtersFrame = new FiltersFrame(this, user);
+        filtersFrame.setVisible(true);
     }
 
     public void showAlertsFrame() {
