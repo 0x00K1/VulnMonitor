@@ -5,8 +5,13 @@ import com.vulnmonitor.model.User;
 import com.vulnmonitor.Main;
 
 import javax.swing.*;
+import javax.swing.event.HyperlinkEvent;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.text.AbstractDocument;
+
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.MouseEvent;
 import java.awt.*;
 import java.util.List;
 
@@ -19,6 +24,8 @@ public class MainFrame extends JFrame {
 
     // ====== NORTH ======
     private JLabel titleLabel;
+    private JButton loginButton;
+    private JButton signupButton;
     private JButton logoutButton;
     private JProgressBar progressBar;
 
@@ -32,16 +39,19 @@ public class MainFrame extends JFrame {
     private JLabel highCveLabel;
     private JLabel mediumCveLabel;
     private JLabel lowCveLabel;
+    private JLabel totalCveLabel;
     private JButton reloadButton;
     private JButton filterButton;
     private JButton alertsButton;
+    private JButton archivesButton;
     private JButton settingsButton;
+    private JButton aboutButton;
 
     // ====== SOUTH ======
     private JTextField searchField;
-    private JButton searchButton;
+    private JLabel searchButton;
 
-    private Main controller;
+    protected Main controller;
     private User user;
 
     /**
@@ -50,16 +60,25 @@ public class MainFrame extends JFrame {
     public MainFrame(Main controller, User user) {
         this.controller = controller;
         this.user = user;
-
+    
         setTitle("VulnMonitor - CVE Dashboard");
         setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null); // Center the frame on the screen
-
+        setResizable(false);
+    
+        // Disable maximization by limiting window state changes
+        addWindowStateListener(e -> {
+            if (e.getNewState() == Frame.MAXIMIZED_BOTH) {
+                // Force back to normal state if maximized
+                setExtendedState(JFrame.NORMAL);
+            }
+        });
+    
         initComponents();
-
+    
         setVisible(true);
-    }
+    }    
 
     /**
      * Initializes all UI components and layouts.
@@ -97,17 +116,62 @@ public class MainFrame extends JFrame {
         titlePanel.add(titleLabel, BorderLayout.CENTER);
 
         northPanel.add(titlePanel, BorderLayout.WEST);
-
-        // Panel for buttons (Logout and Reload)
+        
+        // For debugging . .
+        // JPanel infoPanel = new JPanel(new BorderLayout());
+        // infoPanel.setBackground(new Color(45, 45, 48));
+        // JLabel infoLabel = new JLabel("Logged as " + user.getUsername());
+        // infoLabel.setFont(new Font("Arial", Font.ITALIC, 10));
+        // infoLabel.setForeground(Color.WHITE);  // White text color
+        // infoPanel.add(infoLabel, BorderLayout.CENTER);
+        // northPanel.add(infoPanel, BorderLayout.CENTER);
+        
+        // Panel for buttons (Logout or Login/Signup)
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setBackground(new Color(45, 45, 48));
 
-        // Logout Button
-        logoutButton = new JButton("Logout");
-        logoutButton.setFont(new Font("Arial", Font.PLAIN, 16));
-        logoutButton.setPreferredSize(new Dimension(100, 40));
+        if (user.isLoggedIn()) {
+            // Logout Button
+            logoutButton = new JButton("Logout");
+            logoutButton.setFont(new Font("Arial", Font.PLAIN, 16));
+            logoutButton.setPreferredSize(new Dimension(100, 40));
+            logoutButton.setFocusable(false);
+            logoutButton.addActionListener(e -> {
+                int confirmed = JOptionPane.showConfirmDialog(
+                        this, 
+                        "Are you sure you want to logout ?", 
+                        "Logout Confirmation", 
+                        JOptionPane.YES_NO_OPTION);
+                
+                if (confirmed == JOptionPane.YES_OPTION) {
+                    controller.logout();  // Proceed with logout if confirmed
+                }
+            });
 
-        buttonPanel.add(logoutButton);
+            addHoverEffect(logoutButton);
+
+            buttonPanel.add(logoutButton);
+        } else {
+            // Login Button
+            loginButton = new JButton("Login");
+            loginButton.setFont(new Font("Arial", Font.PLAIN, 16));
+            loginButton.setPreferredSize(new Dimension(100, 40));
+            loginButton.setFocusable(false);
+            loginButton.addActionListener(e -> controller.showLoginFrame());
+
+            // Signup Button
+            signupButton = new JButton("Signup");
+            signupButton.setFont(new Font("Arial", Font.PLAIN, 16));
+            signupButton.setPreferredSize(new Dimension(100, 40));
+            signupButton.setFocusable(false);
+            signupButton.addActionListener(e -> controller.handleSignup());
+
+            addHoverEffect(loginButton);
+            addHoverEffect(signupButton);
+
+            buttonPanel.add(loginButton);
+            buttonPanel.add(signupButton);
+        }
 
         northPanel.add(buttonPanel, BorderLayout.EAST);
 
@@ -120,9 +184,6 @@ public class MainFrame extends JFrame {
         getContentPane().add(northPanel, BorderLayout.NORTH);
     }
 
-    /**
-     * Initializes the CENTER panel with CVE information table.
-     */
     /**
      * Initializes the CENTER panel with CVE information table.
      */
@@ -152,43 +213,36 @@ public class MainFrame extends JFrame {
         cveTable.setFont(new Font("Arial", Font.PLAIN, 14));
         cveTable.setForeground(Color.WHITE);
         cveTable.setBackground(new Color(60, 63, 65));
-
-        // Add Mouse Listener to detect row clicks
-        cveTable.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2) { // Double-click detected
-                    int row = cveTable.getSelectedRow();
-                    if (row != -1) {
-                        String cveId = cveTableModel.getValueAt(row, 0).toString();  // Get CVE ID from the selected row
-                        controller.showCVEInfo(cveId);  // Ask controller to show CVE details
-                    }
-                }
-            }
-        });
+        cveTable.setFocusable(false);
 
         // Custom Cell Renderer to add borders between rows (lines between CVEs)
         DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer() {
-			private static final long serialVersionUID = 1L;
+            private static final long serialVersionUID = 1L;
 
-			@Override
+            @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
-                // Center alignment for CVE ID and Severity
-                if (column == 0 || column == 1) {
+                // Get the actual column name to check for specific columns
+                String columnName = table.getColumnName(column);
+
+                // Center alignment for CVE ID and Severity columns based on their names
+                if ("CVE ID".equalsIgnoreCase(columnName) || "Severity".equalsIgnoreCase(columnName)) {
                     ((JLabel) c).setHorizontalAlignment(SwingConstants.CENTER);
+                } else {
+                    // Default alignment for other columns (left-aligned)
+                    ((JLabel) c).setHorizontalAlignment(SwingConstants.LEFT);
                 }
 
-                // Apply color coding only for the Severity column (column 1)
-                if (column == 1) {
+                // Apply color coding for the "Severity" column, regardless of its position
+                if ("Severity".equalsIgnoreCase(columnName)) {
                     String severity = value != null ? value.toString().toLowerCase() : "";
                     switch (severity) {
                         case "critical":
                             c.setForeground(Color.RED);
                             break;
                         case "high":
-                            c.setForeground(new Color(255, 165, 0)); // Orange color
+                            c.setForeground(new Color(255, 165, 0));
                             break;
                         case "medium":
                             c.setForeground(Color.YELLOW.darker());
@@ -229,6 +283,90 @@ public class MainFrame extends JFrame {
         JScrollPane tableScrollPane = new JScrollPane(cveTable);
         centerPanel.add(tableScrollPane, BorderLayout.CENTER);
 
+        // Add Mouse Listener to detect row clicks
+        cveTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) { // Double-click detected
+                    int row = cveTable.getSelectedRow();
+                    if (row != -1) {
+                        String cveId = cveTableModel.getValueAt(row, 0).toString();  // Get CVE ID from the selected row
+                        controller.showCVEInfo(cveId);  // Ask controller to show CVE details
+                        cveTable.clearSelection();  // Clear selection after showing details
+                    }
+                }
+            }
+        });
+
+        // Create Popup Menu for right-click context menu
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem viewDetailsMenuItem = new JMenuItem("View Details");
+        JMenuItem archiveMenuItem = new JMenuItem("Archive");
+        JMenuItem copyCveIdMenuItem = new JMenuItem("Copy CVE ID");
+
+        // Add action listeners for each menu item
+        viewDetailsMenuItem.addActionListener(e -> {
+            int row = cveTable.getSelectedRow();
+            if (row != -1) {
+                String cveId = cveTableModel.getValueAt(row, 0).toString();
+                controller.showCVEInfo(cveId);  // Trigger the method to show CVE details
+                cveTable.clearSelection();
+            }
+        });
+
+        archiveMenuItem.addActionListener(e -> {
+            int row = cveTable.getSelectedRow();
+            if (row != -1) {
+                String cveId = cveTableModel.getValueAt(row, 0).toString();
+                // Add logic for archiving the CVE (Currently not implemented)
+                JOptionPane.showMessageDialog(this, "Archiving feature will be implemented for: " + cveId, "Archive", JOptionPane.INFORMATION_MESSAGE);
+                cveTable.clearSelection();
+            }
+        });
+
+        copyCveIdMenuItem.addActionListener(e -> {
+            int row = cveTable.getSelectedRow();
+            if (row != -1) {
+                String cveId = cveTableModel.getValueAt(row, 0).toString();
+                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(cveId), null);
+                cveTable.clearSelection();
+            }
+        });
+
+        // Add the menu items to the popup menu
+        popupMenu.add(viewDetailsMenuItem);
+        popupMenu.add(archiveMenuItem);
+        popupMenu.add(copyCveIdMenuItem);
+
+        // Add Mouse Listener to show the popup menu on right-click
+        cveTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger()) { // For Windows/Linux right-click
+                    showPopup(e);
+                }
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger()) { // For macOS right-click
+                    showPopup(e);
+                }
+            }
+
+            private void showPopup(MouseEvent e) {
+                int row = cveTable.rowAtPoint(e.getPoint());
+                if (row >= 0 && row < cveTable.getRowCount()) {
+                    cveTable.setRowSelectionInterval(row, row); // Select the row under right-click
+                } else {
+                    cveTable.clearSelection(); // Clear selection if right-click is outside the rows
+                }
+
+                // Show the popup menu at the location of the mouse event
+                popupMenu.show(e.getComponent(), e.getX(), e.getY());
+            }
+        });
+
         getContentPane().add(centerPanel, BorderLayout.CENTER);
     }
 
@@ -247,12 +385,15 @@ public class MainFrame extends JFrame {
         eastPanel.add(separator1);
         
         eastPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Spacing
-
+        
         // OS Information
-        osLabel = new JLabel("Selected OS: " + user.getUserFilters().getOsFilter());
-        osLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        osLabel = new JLabel("OS: " + user.getUserFilters().getOsFilter());
+        osLabel.setFont(new Font("Arial", Font.BOLD, 20));
         osLabel.setForeground(Color.WHITE);  // White text
         osLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        Dimension osLabelSize = new Dimension(170, osLabel.getPreferredSize().height);  // Fixed width of 170px # Use it for expand the east panel
+        osLabel.setPreferredSize(osLabelSize);
+        osLabel.setMaximumSize(osLabelSize);
         eastPanel.add(osLabel);
         eastPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Spacing
 
@@ -261,7 +402,8 @@ public class MainFrame extends JFrame {
         highCveLabel = createColoredLabel("High CVEs: 0", new Color(255, 165, 0)); // Orange
         mediumCveLabel = createColoredLabel("Medium CVEs: 0", Color.YELLOW.darker());
         lowCveLabel = createColoredLabel("Low CVEs: 0", Color.GREEN.darker());
-
+        totalCveLabel = createColoredLabel("Total CVEs: 0", Color.WHITE);
+        
         eastPanel.add(criticalCveLabel);
         eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         eastPanel.add(highCveLabel);
@@ -269,6 +411,8 @@ public class MainFrame extends JFrame {
         eastPanel.add(mediumCveLabel);
         eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         eastPanel.add(lowCveLabel);
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        eastPanel.add(totalCveLabel);
 
         eastPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Spacing
         
@@ -285,6 +429,7 @@ public class MainFrame extends JFrame {
         reloadButton.setPreferredSize(new Dimension(120, 40));
         reloadButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         reloadButton.setMaximumSize(new Dimension(250, 40));
+        reloadButton.setFocusable(false);
         reloadButton.addActionListener(e -> controller.startCVEFetching(true));
         
         // Filters Button
@@ -293,6 +438,7 @@ public class MainFrame extends JFrame {
         filterButton.setPreferredSize(new Dimension(120, 40));
         filterButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         filterButton.setMaximumSize(new Dimension(250, 40));
+        filterButton.setFocusable(false);
         filterButton.addActionListener(e -> controller.showFilterFrame());  // Define the filter logic in this method
 
         // Alerts Button
@@ -301,7 +447,17 @@ public class MainFrame extends JFrame {
         alertsButton.setPreferredSize(new Dimension(120, 40));
         alertsButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         alertsButton.setMaximumSize(new Dimension(250, 40));
+        alertsButton.setFocusable(false);
         alertsButton.addActionListener(e -> controller.showAlertsFrame());  // Define the alerts logic in this method
+
+        // Archive Button
+        archivesButton = new JButton("Archives");
+        archivesButton.setFont(new Font("Arial", Font.PLAIN, 20));
+        archivesButton.setPreferredSize(new Dimension(120, 40));
+        archivesButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
+        archivesButton.setMaximumSize(new Dimension(250, 40));
+        archivesButton.setFocusable(false);
+        archivesButton.addActionListener(e -> controller.showArchivesFrame());  // Define the alerts logic in this method
         
         // Settings Button
         settingsButton = new JButton("Settings");
@@ -309,7 +465,25 @@ public class MainFrame extends JFrame {
         settingsButton.setPreferredSize(new Dimension(120, 40));
         settingsButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         settingsButton.setMaximumSize(new Dimension(250, 40));
+        settingsButton.setFocusable(false);
         settingsButton.addActionListener(e -> controller.showSettingsFrame());  // Define the settings logic in this method
+
+        // About Button
+        aboutButton = new JButton("About");
+        aboutButton.setFont(new Font("Arial", Font.PLAIN, 20));
+        aboutButton.setPreferredSize(new Dimension(120, 40));
+        aboutButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
+        aboutButton.setMaximumSize(new Dimension(250, 40));
+        aboutButton.setFocusable(false);
+        aboutButton.addActionListener(e -> showAboutDialog());
+
+        // Add the hover effect to all buttons
+        addHoverEffect(reloadButton);
+        addHoverEffect(filterButton);
+        addHoverEffect(alertsButton);
+        addHoverEffect(archivesButton);
+        addHoverEffect(settingsButton);
+        addHoverEffect(aboutButton);
 
         eastPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Spacing between line and buttons
         eastPanel.add(reloadButton);
@@ -318,7 +492,11 @@ public class MainFrame extends JFrame {
         eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         eastPanel.add(alertsButton);
         eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        eastPanel.add(archivesButton);
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         eastPanel.add(settingsButton);
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        eastPanel.add(aboutButton);
 
         getContentPane().add(eastPanel, BorderLayout.EAST);
     }
@@ -330,33 +508,126 @@ public class MainFrame extends JFrame {
         JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         southPanel.setBackground(new Color(45, 45, 48));  // Dark background
         southPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 20, 20));
-
+    
         // Search Field
         searchField = new JTextField(68);
         searchField.setFont(new Font("Arial", Font.PLAIN, 16));
+        searchField.setPreferredSize(new Dimension(140, 30));
         searchField.setToolTipText("Search CVEs...");
+        // searchField.setFocusable(false);
+    
+        // Limit the input length to 100 characters 
+        ((AbstractDocument) searchField.getDocument()).setDocumentFilter(new Main.LengthFilter(100));
+    
+        // Search Icon as Label
+        searchButton = new JLabel();
+        searchButton.setPreferredSize(new Dimension(40, 30));
+        
+        // Load the search icon from the resources folder
+        ImageIcon searchIcon = new ImageIcon(getClass().getClassLoader().getResource("search.png"));
+        searchButton.setIcon(searchIcon);
+        
+        // Add MouseListener to simulate a button click
+        searchButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                handleSearch();  // Trigger the search action on click
+            }
+    
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                searchButton.setCursor(new Cursor(Cursor.HAND_CURSOR));  // Change cursor to hand
+            }
+    
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                searchButton.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));  // Revert cursor when not hovering
+            }
+        });
+        searchField.addActionListener(e -> handleSearch());
+    
+        // Add components to South Panel
+        southPanel.add(searchField);
+        southPanel.add(Box.createRigidArea(new Dimension(5, 0)));
+        southPanel.add(searchButton); 
+    
+        getContentPane().add(southPanel, BorderLayout.SOUTH);
+    }    
 
-        // Search Button
-        searchButton = new JButton("Search");
-        searchButton.setFont(new Font("Arial", Font.PLAIN, 16));
-        searchButton.setPreferredSize(new Dimension(120, 40));
+    /**
+     * Method to add hover effect to a button.
+     */
+    private void addHoverEffect(JButton button) {
+        button.setForeground(Color.WHITE);  // Default color
 
-        // Add ActionListener to Search Button
-        searchButton.addActionListener(e -> {
-            String query = searchField.getText().trim();
-            if (!query.isEmpty()) {
-                controller.performSearch(query);
-            } else {
-                showMessage("Please enter a CVE ID or keyword to search.", "Search Input Required", JOptionPane.WARNING_MESSAGE);
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setForeground(new Color(68, 110, 158));  // Use the specified RGB color on hover
+                button.setCursor(new Cursor(Cursor.HAND_CURSOR));  // Change cursor to hand
+            }
+
+            @Override
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setForeground(Color.WHITE);  // Revert color when not hovering
+            }
+        });
+    }
+
+    // Method to show the About dialog with clickable URLs
+    private void showAboutDialog() {
+        String repoUrl = "https://github.com/0x00K1/VulnMonitor";
+        String userGuideUrl = "http://127.0.0.1/vulnmonitor/userguide";
+        
+        String aboutMessage = "<html><body style='text-align: center;'>"
+            + "<h2>VulnMonitor - CVE Dashboard</h2>"
+            + "<p>Version: x.x</p>"
+            + "<p>Author: Group 6</p>"
+            + "<p>Stay up-to-date with the latest vulnerabilities to secure your systems :)</p>"
+            + "<p style='margin-top: 20px;'><a href='" + repoUrl + "'>Repository</a></p>"
+            + "<p style='margin-top: 10px;'><a href='" + userGuideUrl + "'>UserGuide</a></p>"
+            + "</body></html>";
+
+        // Use a JEditorPane for handling clickable HTML links properly
+        JEditorPane aboutPane = new JEditorPane("text/html", aboutMessage);
+        aboutPane.setEditable(false);
+        aboutPane.setOpaque(false);
+        aboutPane.setBorder(null);
+        
+        // Add Hyperlink Listener to detect which link is clicked
+        aboutPane.addHyperlinkListener(e -> {
+            if (HyperlinkEvent.EventType.ACTIVATED.equals(e.getEventType())) {
+                try {
+                    Desktop.getDesktop().browse(e.getURL().toURI());  // Open the clicked link
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
             }
         });
 
-        // Add components to South Panel
-        southPanel.add(searchField);
-        southPanel.add(searchButton);
-
-        getContentPane().add(southPanel, BorderLayout.SOUTH);
+        // Show dialog with clickable links
+        JOptionPane.showMessageDialog(this, aboutPane, "About VulnMonitor", JOptionPane.INFORMATION_MESSAGE);
     }
+
+    private void handleSearch() {
+        String query = searchField.getText().trim();
+        if (!query.isEmpty()) {
+            // Check if the query matches the format of a CVE ID (CVE-YYYY-NNNNN)
+            if (query.matches("CVE-\\d{4}-\\d{4,6}")) {
+                controller.performSearch(query);
+            } else {
+                showMessage("CVE IDs should follow the format: CVE-YYYY-NNNNNN\n\n"
+                    + "For example:\n"
+                    + "1. CVE-2024-12345\n"
+                    + "2. CVE-2023-0001\n"
+                    + "3. CVE-2022-56789",
+                    "CVE ID Format", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+        } else {
+            showMessage("Please enter a CVE ID or keyword to search.", "Search Input Required", JOptionPane.WARNING_MESSAGE);
+        }
+    }    
 
     public void showProgressBar(String text) {
         progressBar.setString(text);
@@ -375,8 +646,11 @@ public class MainFrame extends JFrame {
         reloadButton.setEnabled(enabled);
         filterButton.setEnabled(enabled);
         alertsButton.setEnabled(enabled);
+        archivesButton.setEnabled(enabled);
         settingsButton.setEnabled(enabled);
+        aboutButton.setEnabled(enabled);
         searchButton.setEnabled(enabled);
+        searchField.setEnabled(enabled);
     }
 
     /**
@@ -390,6 +664,7 @@ public class MainFrame extends JFrame {
         int highCount = 0;
         int mediumCount = 0;
         int lowCount = 0;
+        int totalCount = cveList.size();
 
         for (CVE cve : cveList) {
             cveTableModel.addRow(new Object[]{
@@ -419,17 +694,27 @@ public class MainFrame extends JFrame {
         }
 
         // Update the selected OS label
-        osLabel.setText("Selected OS: " + user.getUserFilters().getOsFilter());
+        osLabel.setText("OS: " + user.getUserFilters().getOsFilter());
 
         // Update the CVE count labels dynamically
         criticalCveLabel.setText("Critical CVEs: " + criticalCount);
         highCveLabel.setText("High CVEs: " + highCount);
         mediumCveLabel.setText("Medium CVEs: " + mediumCount);
         lowCveLabel.setText("Low CVEs: " + lowCount);
+        totalCveLabel.setText("Total CVEs: " + totalCount);
 
         // Revalidate and repaint the table to ensure it's updated
         cveTable.revalidate();
         cveTable.repaint();
+    }
+
+    public void resetCVETable() {
+        cveTableModel.setRowCount(0);
+        criticalCveLabel.setText("Critical CVEs: 0");
+        highCveLabel.setText("High CVEs: 0");
+        mediumCveLabel.setText("Medium CVEs: 0");
+        lowCveLabel.setText("Low CVEs: 0");
+        totalCveLabel.setText("Total CVEs: 0");
     }
 
     /**

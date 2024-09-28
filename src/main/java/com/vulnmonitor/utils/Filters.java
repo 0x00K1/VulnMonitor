@@ -89,11 +89,51 @@ public class Filters {
         return filteredCVE;
     }
 
+    // Method to filter by resolved or unresolved status
+    public List<CVE> filterByResolvedStatus(List<CVE> cves, boolean includeResolved) {
+        List<CVE> filteredCVE = new ArrayList<>();
+
+        for (CVE cve : cves) {
+            if (includeResolved) {
+                // If we want to include resolved, just skip filtering
+                filteredCVE.add(cve);
+            } else {
+                // Exclude resolved CVEs, only include unresolved ones
+                if (!"resolved".equalsIgnoreCase(cve.getState())) {
+                    filteredCVE.add(cve);
+                }
+            }
+        }
+
+        return filteredCVE;
+    }
+
+    // Method to filter by rejected status
+    public List<CVE> filterByRejectedStatus(List<CVE> cves, boolean includeRejected) {
+        List<CVE> filteredCVE = new ArrayList<>();
+
+        for (CVE cve : cves) {
+            if (includeRejected) {
+                // If we want to include rejected CVEs, add them
+                filteredCVE.add(cve);
+            } else {
+                // Exclude rejected CVEs
+                if (!"rejected".equalsIgnoreCase(cve.getState())) {
+                    filteredCVE.add(cve);
+                }
+            }
+        }
+
+        return filteredCVE;
+    }
+
     // Method to apply multiple filters
-    public List<CVE> applyFilters(List<CVE> cves, String selectedOS, String selectedSeverity, List<String> selectedProducts) {
+    public List<CVE> applyFilters(List<CVE> cves, String selectedOS, String selectedSeverity, List<String> selectedProducts, boolean includeResolved, boolean includeRejected) {
         List<CVE> filteredCVE = filterByOS(cves, selectedOS);
         filteredCVE = filterBySeverity(filteredCVE, selectedSeverity);
         filteredCVE = filterByProduct(filteredCVE, selectedProducts);
+        filteredCVE = filterByResolvedStatus(filteredCVE, includeResolved);
+        filteredCVE = filterByRejectedStatus(filteredCVE, includeRejected);
 
         return filteredCVE;
     }

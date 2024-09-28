@@ -15,59 +15,117 @@ public class CVEInfoFrame extends JFrame {
 
     public CVEInfoFrame(CVE cve) {
         setTitle("CVE Details - " + cve.getCveId());
-        setSize(700, 500);
-        setLocationRelativeTo(null);  // Center the frame on the screen
-        setResizable(true);  // Allow resizing
+        setSize(800, 600);
+        setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // Create a panel to hold CVE details
-        JPanel detailsPanel = new JPanel();
-        detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
-        detailsPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));  // Add padding
-        detailsPanel.setBackground(new Color(45, 45, 48));  // Modern dark background
+        JTabbedPane tabbedPane = new JTabbedPane();
 
-        // Add CVE details as labels with null handling (show N/A for missing info)
-        detailsPanel.add(createDetailLabel("CVE ID: " + handleNull(cve.getCveId())));
-        detailsPanel.add(createDetailLabel("Severity: " + handleNull(cve.getSeverity())));
-        detailsPanel.add(createDetailLabel("Description: " + handleNull(cve.getDescription())));
-        detailsPanel.add(createDetailLabel("Affected Product: " + handleNull(cve.getAffectedProduct())));
-        detailsPanel.add(createDetailLabel("Platform: " + handleNull(cve.getPlatform())));
-        detailsPanel.add(createDetailLabel("Published Date: " + handleNull(cve.getPublishedDate())));
-        detailsPanel.add(createDetailLabel("State: " + handleNull(cve.getState())));
-        detailsPanel.add(createDetailLabel("Date Reserved: " + handleNull(cve.getDateReserved())));
-        detailsPanel.add(createDetailLabel("Date Updated: " + handleNull(cve.getDateUpdated())));
-        detailsPanel.add(createDetailLabel("CVSS Score: " + handleNull(cve.getCvssScore())));
-        detailsPanel.add(createDetailLabel("CVSS Vector: " + handleNull(cve.getCvssVector())));
-        detailsPanel.add(createDetailLabel("CAPEC Description: " + handleNull(cve.getCapecDescription())));
-        detailsPanel.add(createDetailLabel("CWE Description: " + handleNull(cve.getCweDescription())));
-        detailsPanel.add(createDetailLabel("References: " + handleNull(cve.getReferences())));  // Use the new list handler
-        detailsPanel.add(createDetailLabel("Affected Versions: " + handleNull(cve.getAffectedVersions())));  // Use the new list handler
-        detailsPanel.add(createDetailLabel("Credits: " + handleNull(cve.getCredits())));
+        // Overview Tab
+        JPanel overviewPanel = createOverviewPanel(cve);
+        tabbedPane.addTab("Overview", overviewPanel);
 
-        // Add a scroll pane to the details panel to handle overflow of content
-        JScrollPane scrollPane = new JScrollPane(detailsPanel);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder());
-        getContentPane().add(scrollPane, BorderLayout.CENTER);
+        // Details Tab
+        JPanel detailsPanel = createDetailsPanel(cve);
+        tabbedPane.addTab("Details", detailsPanel);
 
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);  // Close this frame without exiting the app
+        // References Tab
+        JPanel referencesPanel = createReferencesPanel(cve);
+        tabbedPane.addTab("References", referencesPanel);
+
+        getContentPane().add(tabbedPane, BorderLayout.CENTER);
+
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
 
-    // Helper method to create labels for CVE details with modern styling
-    private JLabel createDetailLabel(String text) {
+
+    private JPanel createOverviewPanel(CVE cve) {
+        JPanel panel = new JPanel(new GridLayout(5, 2, 10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        panel.add(createLabel("CVE ID:"));
+        panel.add(createValueLabel(cve.getCveId()));
+
+        panel.add(createLabel("Severity:"));
+        panel.add(createValueLabel(cve.getSeverity()));
+
+        panel.add(createLabel("Published Date:"));
+        panel.add(createValueLabel(cve.getPublishedDate()));
+
+        panel.add(createLabel("CVSS Score:"));
+        panel.add(createValueLabel(cve.getCvssScore()));
+
+        panel.add(createLabel("CVSS Vector:"));
+        panel.add(createValueLabel(cve.getCvssVector()));
+
+        return panel;
+    }
+
+    private JPanel createDetailsPanel(CVE cve) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JTextArea descriptionArea = new JTextArea(handleNull(cve.getDescription()));
+        descriptionArea.setLineWrap(true);
+        descriptionArea.setWrapStyleWord(true);
+        descriptionArea.setEditable(false);
+        descriptionArea.setBackground(panel.getBackground());
+
+        panel.add(new JScrollPane(descriptionArea), BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel createReferencesPanel(CVE cve) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        List<String> references = cve.getReferences();
+        if (references != null && !references.isEmpty()) {
+            DefaultListModel<String> listModel = new DefaultListModel<>();
+            for (String ref : references) {
+                listModel.addElement(ref);
+            }
+            JList<String> referenceList = new JList<>(listModel);
+            referenceList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+            referenceList.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent e) {
+                    if (e.getClickCount() == 2) {
+                        String url = referenceList.getSelectedValue();
+                        try {
+                            Desktop.getDesktop().browse(new java.net.URI(url));
+                        } catch (Exception ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                }
+            });
+            panel.add(new JScrollPane(referenceList), BorderLayout.CENTER);
+        } else {
+            panel.add(createValueLabel("No references available."), BorderLayout.CENTER);
+        }
+
+        return panel;
+    }
+
+    private JLabel createLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Arial", Font.PLAIN, 14));  // Modern font
-        label.setForeground(Color.WHITE);  // White text for contrast in dark mode
-        label.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Add padding
+        label.setFont(new Font("Arial", Font.BOLD, 14));
         return label;
     }
 
-    // Helper method to handle null or empty String values
+    private JLabel createValueLabel(String text) {
+        JLabel label = new JLabel(handleNull(text));
+        label.setFont(new Font("Arial", Font.PLAIN, 14));
+        return label;
+    }
+
     private String handleNull(String value) {
         return (value == null || value.trim().isEmpty()) ? "N/A" : value;
     }
 
-    // Helper method to handle null or empty List<String> values
-    private String handleNull(List<String> list) {
-        return (list == null || list.isEmpty()) ? "N/A" : String.join(", ", list);
-    }
+//    private String handleNull(List<String> list) {
+//        return (list == null || list.isEmpty()) ? "N/A" : String.join(", ", list);
+//    }
 }

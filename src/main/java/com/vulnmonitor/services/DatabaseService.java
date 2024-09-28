@@ -1,38 +1,281 @@
 package com.vulnmonitor.services;
 
-import com.vulnmonitor.gui.MainFrame;
 import com.vulnmonitor.model.CVE;
+import com.vulnmonitor.model.UserAlerts;
+import com.vulnmonitor.model.UserFilters;
+import com.vulnmonitor.model.UserSettings;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+
+import org.mindrot.jbcrypt.BCrypt;
 
 public class DatabaseService {
 
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/vulnmonitor";
-    private static final String DB_USER = "";
-    private static final String DB_PASSWORD = "";
+	private static HikariDataSource dataSource;
 
-    public void connect() {
+    // Static block to initialize the connection pool when the class is loaded
+    static {
         try {
-            Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-            // System.out.println("Connected to the database...");
-            connection.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
+            HikariConfig config = new HikariConfig();
+            config.setJdbcUrl("jdbc:mysql://localhost:3306/vulnmonitor");
+            config.setUsername("");
+            config.setPassword("");
+            config.setMaximumPoolSize(10);  // Maximum connections in the pool
+            config.setMinimumIdle(2);  // Minimum number of idle connections
+            config.setIdleTimeout(60000);  // Idle timeout in milliseconds (1 minute)
+            config.setConnectionTimeout(30000);  // Maximum wait for a connection in milliseconds (30 seconds)
+            config.setLeakDetectionThreshold(7000);  // Connection leak detection threshold in milliseconds
+            config.setAutoCommit(true);  // Enable auto-commit by default
+
+            // Initialize the connection pool
+            dataSource = new HikariDataSource(config);
+
+            // System.out.println("Connection pool initialized.");
+
+        } catch (Exception e) {
+           e.printStackTrace();
         }
     }
 
-    public void saveCVEData(List<CVE> cves) {
-        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD)) {
-            String checkSql = "SELECT COUNT(*) FROM cves WHERE cve_id = ?";
-            String insertSql = "INSERT INTO cves (cve_id, description, severity, affected_product, platform, published_date, state, date_reserved, date_updated, cvss_score, cvss_vector, capec_description, cwe_description, cve_references, affected_versions, credits) " +
-                               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    // Method to get a connection from the pool
+    public Connection getConnection() throws SQLException {
+        return dataSource.getConnection();
+    }
     
-            PreparedStatement checkStatement = connection.prepareStatement(checkSql);
-            PreparedStatement insertStatement = connection.prepareStatement(insertSql);
+    // Method to check if a connection is established
+    public boolean isConnected() {
+        try (Connection connection = getConnection()) {
+            // If we get a valid connection, return true
+            return connection != null && !connection.isClosed();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;  // Return false if connection failed
+    }
+
+    // Close the pool when the application is shutting down
+    public void closePool() {
+        if (dataSource != null) {
+            dataSource.close();
+            // System.out.println("Connection pool closed.");
+        }
+    }
+
+    public boolean authenticate(String usernameOrEmail, String password) {
+        String query = "SELECT password_hash FROM users WHERE username = ? OR email = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(query)) {
+
+            stmt.setString(1, usernameOrEmail);
+            stmt.setString(2, usernameOrEmail);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                String storedHashedPassword = rs.getString("password_hash");
+
+                // Replace $2y$ with $2a$ to ensure compatibility with Java BCrypt # PHP --> JAVA
+                if (storedHashedPassword.startsWith("$2y$")) {
+                    storedHashedPassword = storedHashedPassword.replaceFirst("\\$2y\\$", "\\$2a\\$");
+                }
+
+                // Use BCrypt to verify the password
+                if (BCrypt.checkpw(password, storedHashedPassword)) {
+                    return true; // Authentication successful
+                } else {
+                    return false; // Invalid password
+                }
+            } else {
+                return false; // User not found
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public String getEmailForUsername(String username) {
+        String query = "SELECT email FROM users WHERE username = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(query)) {
+    
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getString("email");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    public String getUsernameForEmail(String email) {
+        String query = "SELECT username FROM users WHERE email = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(query)) {
+    
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("username");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public int getUserId(String usernameOrEmail) {
+        String query = "SELECT id FROM users WHERE username = ? OR email = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(query)) {
+    
+            stmt.setString(1, usernameOrEmail);
+            stmt.setString(2, usernameOrEmail);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt("id");  // Return the user ID
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return -1;  // Return invalid ID if not found
+    }
+    
+    public UserFilters getUserFilters(int userId) {
+        String query = "SELECT os_filter, severity_filter, product_filters, include_resolved, include_rejected FROM user_filters WHERE user_id = ?";
+        try (Connection connection = getConnection();
+             PreparedStatement stmt = connection.prepareStatement(query)) {
+    
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+    
+            if (rs.next()) {
+                String osFilter = rs.getString("os_filter");
+                String severityFilter = rs.getString("severity_filter");
+                String productFiltersStr = rs.getString("product_filters");
+                List<String> productFilters = (productFiltersStr != null && !productFiltersStr.isEmpty())
+                        ? Arrays.asList(productFiltersStr.split(","))
+                        : new ArrayList<>();               
+                boolean includeResolved = rs.getBoolean("include_resolved");
+                boolean includeRejected = rs.getBoolean("include_rejected");
+    
+                // Create and return the UserFilters object including the new includeRejected field
+                return new UserFilters(osFilter, severityFilter, productFilters, includeResolved, includeRejected);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public UserAlerts getUserAlerts(int userId) {
+        String query = "SELECT * FROM user_alerts WHERE user_id = ?";
+        try (Connection connection = getConnection();
+            PreparedStatement stmt = connection.prepareStatement(query)) {
+
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                // Assuming UserAlerts is more complex, replace this with actual fields
+                return new UserAlerts("Alert data for user");  // Replace with actual fields
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public UserSettings getUserSettings(int userId) {
+        String query = "SELECT notifications_enabled, last_login, dark_mode_enabled, startup_enabled FROM user_settings WHERE user_id = ?";
+        try (Connection connection = getConnection();
+            PreparedStatement stmt = connection.prepareStatement(query)) {
+
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                boolean notificationsEnabled = rs.getBoolean("notifications_enabled");
+                Timestamp lastLogin = rs.getTimestamp("last_login");  // Fetch the timestamp for last login
+                boolean darkModeEnabled = rs.getBoolean("dark_mode_enabled");
+                boolean startupEnabled = rs.getBoolean("startup_enabled");
+
+                // Create and return the UserSettings object
+                return new UserSettings(notificationsEnabled, lastLogin, darkModeEnabled, startupEnabled);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public void updateUserFilters(int userId, UserFilters filters) {
+        if (userId == -1) {
+            System.out.println("User not found.");
+            return;
+        }
+    
+        // Queries for checking, updating, and inserting filters
+        String checkQuery = "SELECT COUNT(*) FROM user_filters WHERE user_id = ?";
+        String updateQuery = "UPDATE user_filters SET os_filter = ?, severity_filter = ?, product_filters = ?, include_resolved = ?, include_rejected = ? WHERE user_id = ?";
+        String insertQuery = "INSERT INTO user_filters (user_id, os_filter, severity_filter, product_filters, include_resolved, include_rejected) VALUES (?, ?, ?, ?, ?, ?)";
+    
+        try (Connection connection = getConnection()) {
+            // Check if user filters already exist
+            try (PreparedStatement checkStmt = connection.prepareStatement(checkQuery)) {
+                checkStmt.setInt(1, userId);
+                ResultSet rs = checkStmt.executeQuery();
+    
+                if (rs.next() && rs.getInt(1) > 0) {
+                    // User has filters, so update them
+                    try (PreparedStatement updateStmt = connection.prepareStatement(updateQuery)) {
+                        updateStmt.setString(1, filters.getOsFilter());
+                        updateStmt.setString(2, filters.getSeverityFilter());
+                        updateStmt.setString(3, String.join(",", filters.getProductFilters()));
+                        updateStmt.setBoolean(4, filters.isIncludeResolved());
+                        updateStmt.setBoolean(5, filters.isIncludeRejected());
+                        updateStmt.setInt(6, userId);
+    
+                        updateStmt.executeUpdate();
+                    }
+                } else {
+                    // No filters found, insert new filters
+                    try (PreparedStatement insertStmt = connection.prepareStatement(insertQuery)) {
+                        insertStmt.setInt(1, userId);
+                        insertStmt.setString(2, filters.getOsFilter());
+                        insertStmt.setString(3, filters.getSeverityFilter());
+                        insertStmt.setString(4, String.join(",", filters.getProductFilters()));
+                        insertStmt.setBoolean(5, filters.isIncludeResolved());
+                        insertStmt.setBoolean(6, filters.isIncludeRejected());
+    
+                        insertStmt.executeUpdate();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }     
+
+    public void saveCVEData(List<CVE> cves) {
+        String checkSql = "SELECT COUNT(*) FROM cves WHERE cve_id = ?";
+        String insertSql = "INSERT INTO cves (cve_id, description, severity, affected_product, platform, published_date, state, date_reserved, date_updated, cvss_score, cvss_vector, capec_description, cwe_description, cve_references, affected_versions, credits) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    
+        try (Connection connection = getConnection();
+             PreparedStatement checkStatement = connection.prepareStatement(checkSql);
+             PreparedStatement insertStatement = connection.prepareStatement(insertSql)) {
     
             SimpleDateFormat dateFormatWithMillis = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
             SimpleDateFormat dateFormatWithoutMillis = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
@@ -47,7 +290,7 @@ public class DatabaseService {
                 resultSet.next();  // Move to the first row
     
                 if (resultSet.getInt(1) == 0) {  // If the count is 0, the CVE doesn't exist
-                    // Truncate each field as per MySQL schema constraints
+                    // Truncate fields as per MySQL schema constraints
                     String cveId = truncate(cve.getCveId(), 100);
                     String severity = truncate(cve.getSeverity(), 50);
                     String affectedProduct = truncate(cve.getAffectedProduct(), 255);
@@ -85,7 +328,7 @@ public class DatabaseService {
             System.out.println("Error saving CVE data to the database.");
             e.printStackTrace();
         }
-    }    
+    }        
 
     private java.sql.Date parseDate(String dateString, SimpleDateFormat dateFormatWithMillis, SimpleDateFormat dateFormatWithoutMillis, SimpleDateFormat outputDateFormat) {
         if (dateString == null || dateString.equalsIgnoreCase("N/A")) {
@@ -115,13 +358,12 @@ public class DatabaseService {
 
         String sql = "SELECT * FROM cves WHERE cve_id LIKE ? OR description LIKE ?";
 
-        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        try (Connection connection = getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
 
             String queryParam = "%" + query + "%";
             statement.setString(1, queryParam);
             statement.setString(2, queryParam);
-
             ResultSet resultSet = statement.executeQuery();
 
             while (resultSet.next()) {
@@ -140,7 +382,7 @@ public class DatabaseService {
         List<CVE> cveList = new ArrayList<>();
         String sql = "SELECT * FROM cves";
 
-        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        try (Connection connection = getConnection();
              Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(sql)) {
 
@@ -160,7 +402,7 @@ public class DatabaseService {
         CVE cve = null;
         String sql = "SELECT * FROM cves WHERE cve_id = ?";
 
-        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        try (Connection connection = getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setString(1, cveId);
@@ -179,14 +421,25 @@ public class DatabaseService {
     
     public String getLastUpdateDate() {
         String lastUpdateDate = "1970-01-01";  // Default date if not found
-        String sql = "SELECT dvalue FROM metadata WHERE key_name = 'last_update_date'";
+        String selectSql = "SELECT dvalue FROM metadata WHERE key_name = 'last_update_date'";
+        String insertSql = "INSERT INTO metadata (key_name, dvalue) VALUES ('last_update_date', ?)";
 
-        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        try (Connection connection = getConnection();
              Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql)) {
+             ResultSet resultSet = statement.executeQuery(selectSql)) {
 
             if (resultSet.next()) {
                 lastUpdateDate = resultSet.getString("dvalue");
+            } else {
+                // If not found, insert the current date
+                String currentDate = LocalDate.now().toString();
+
+                try (PreparedStatement insertStatement = connection.prepareStatement(insertSql)) {
+                    insertStatement.setString(1, currentDate);
+                    insertStatement.executeUpdate();
+                }
+
+                lastUpdateDate = currentDate;
             }
 
         } catch (SQLException e) {
@@ -199,7 +452,7 @@ public class DatabaseService {
     public void saveLastUpdateDate(String currentDate) {
         String sql = "UPDATE metadata SET dvalue = ? WHERE key_name = 'last_update_date'";
 
-        try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        try (Connection connection = getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setString(1, currentDate);
@@ -210,29 +463,32 @@ public class DatabaseService {
         }
     }
 
-    public void resetCVEs() {
+    public boolean resetCVEs() {
         String lastUpdateDate = getLastUpdateDate();  // Get last update date from metadata table
         String currentDate = LocalDate.now().toString();  // Get current date as a string
-
+    
         // If it's a new day, reset AUTO_INCREMENT and delete previous records
         if (!currentDate.equals(lastUpdateDate)) {
-            try (Connection connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            try (Connection connection = getConnection();
                  Statement statement = connection.createStatement()) {
                  
                 // Delete all previous day's CVEs
                 statement.executeUpdate("DELETE FROM cves");
-
+    
                 // Reset AUTO_INCREMENT to 1
-                statement.executeUpdate("ALTER TABLE cves AUTO_INCREMENT = 1");
-
+                statement.executeUpdate("ALTER TABLE cves AUTO_INCREMENT = 1"); // Note: It'll cause problems with relational integrity
+    
                 // Update the last update date in the metadata table
                 saveLastUpdateDate(currentDate);
-                MainFrame.cveTableModel.setRowCount(0);  // Clear existing rows
+    
+                return true;  // Indicate success
             } catch (SQLException e) {
                 e.printStackTrace();
+                return false;  // Indicate failure
             }
         }
-    }
+        return false;  // No reset needed
+    }    
 
     private String truncate(String value, int maxLength) {
         if (value == null) {
@@ -256,7 +512,10 @@ public class DatabaseService {
         String cvssVector = resultSet.getString("cvss_vector");
         String capecDescription = resultSet.getString("capec_description");
         String cweDescription = resultSet.getString("cwe_description");
-        List<String> references = List.of(resultSet.getString("cve_references").split(","));
+        String referencesStr = resultSet.getString("cve_references");
+        List<String> references = (referencesStr != null && !referencesStr.isEmpty())
+            ? Arrays.asList(referencesStr.split(","))
+            : new ArrayList<>();
         List<String> affectedVersions = List.of(resultSet.getString("affected_versions").split(","));
         List<String> credits = List.of(resultSet.getString("credits").split(","));
 

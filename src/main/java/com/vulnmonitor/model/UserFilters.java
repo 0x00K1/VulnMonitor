@@ -6,14 +6,16 @@ public class UserFilters {
     private String osFilter;
     private String severityFilter;
     private List<String> productFilters;
-    private boolean includeResolved;  // Example filter option
+    private boolean includeResolved;
+    private boolean includeRejected;
 
     // Constructor
-    public UserFilters(String osFilter, String severityFilter, List<String> productFilters, boolean includeResolved) {
+    public UserFilters(String osFilter, String severityFilter, List<String> productFilters, boolean includeResolved, boolean includeRejected) {
         this.osFilter = osFilter;
         this.severityFilter = severityFilter;
         this.productFilters = productFilters;
         this.includeResolved = includeResolved;
+        this.includeRejected = includeRejected;
     }
 
     // Getter methods
@@ -33,6 +35,10 @@ public class UserFilters {
         return includeResolved;
     }
 
+    public boolean isIncludeRejected() {
+        return includeRejected;
+    }
+
     // Setter methods
     public void setOsFilter(String osFilter) {
         this.osFilter = osFilter;
@@ -50,11 +56,16 @@ public class UserFilters {
         this.includeResolved = includeResolved;
     }
 
+    public void setIncludeRejected(boolean includeRejected) {
+        this.includeRejected = includeRejected;
+    }
+
     // Method to get formatted filter information
     public String getFiltersInfo() {
         return "OS Filter: " + osFilter +
                 "\nSeverity Filter: " + severityFilter +
                 "\nProduct Filters: " + String.join(", ", productFilters) +
-                "\nInclude Resolved: " + includeResolved;
+                "\nInclude Resolved: " + includeResolved +
+                "\nInclude Rejected: " + includeRejected;
     }
 }

@@ -1,3 +1,4 @@
+CREATE DATABASE vulnmonitor;
 USE vulnmonitor;
 
 CREATE TABLE users (
@@ -37,10 +38,17 @@ CREATE TABLE user_filters (
     severity_filter VARCHAR(50),
     product_filters TEXT,
     include_resolved BOOLEAN NOT NULL,
+    include_rejected BOOLEAN NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE user_alerts (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_archives (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -71,6 +79,3 @@ CREATE TABLE metadata (
     key_name VARCHAR(191) UNIQUE NOT NULL,
     dvalue VARCHAR(255) NOT NULL
 );
-
--- Insert initial value to track the last update date (set it to an old date)
-INSERT INTO metadata (key_name, dvalue) VALUES ('last_update_date', '1970-01-01');

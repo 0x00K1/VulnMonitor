@@ -3,16 +3,16 @@ package com.vulnmonitor.gui;
 import com.vulnmonitor.Main;
 import com.vulnmonitor.model.User;;
 
-public class SettingsFrame {
+public class ArchivesFrame {
     // private Main controller;
     // private User user;
 
-    public SettingsFrame(Main controller, User user) {
+    public ArchivesFrame(Main controller, User user) {
         // this.controller = controller;
         // this.user = user;
-        saveSettings();
+        saveArchives();
     }
 
-    private void saveSettings() {
+    private void saveArchives() {
     }
 }

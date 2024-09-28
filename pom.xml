@@ -51,6 +51,36 @@
             <artifactId>flatlaf-intellij-themes</artifactId>
             <version>3.5</version> <!-- Match this version with FlatLaf core -->
         </dependency>
+    
+      <dependency>
+        <groupId>commons-httpclient</groupId>
+        <artifactId>commons-httpclient</artifactId>
+        <version>3.1</version>
+      </dependency>
+      
+      <dependency>
+  		<groupId>com.zaxxer</groupId>
+ 	 	<artifactId>HikariCP</artifactId>
+  		<version>6.0.0</version>
+	  </dependency>
+	  
+	  <dependency>
+  		<groupId>org.mindrot</groupId>
+  		<artifactId>jbcrypt</artifactId>
+  		<version>0.4</version>
+	  </dependency>
+	  
+	  <dependency>
+	    <groupId>ch.qos.logback</groupId>
+	    <artifactId>logback-classic</artifactId>
+	    <version>1.5.3</version>
+	  </dependency>
+	  
+	  <dependency>
+	    <groupId>org.slf4j</groupId>
+	    <artifactId>slf4j-api</artifactId>
+	    <version>2.0.16</version>
+	  </dependency>
     </dependencies>
 
     <build>

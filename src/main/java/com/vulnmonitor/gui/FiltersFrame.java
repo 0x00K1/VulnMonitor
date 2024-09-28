@@ -3,6 +3,7 @@ package com.vulnmonitor.gui;
 import com.vulnmonitor.Main;
 import com.vulnmonitor.model.User;
 import com.vulnmonitor.model.UserFilters;
+import com.vulnmonitor.utils.SessionManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -25,6 +26,7 @@ public class FiltersFrame extends JFrame {
     private JComboBox<String> severityComboBox;
     private JList<String> productList;
     private JCheckBox includeResolvedCheckBox;
+    private JCheckBox includeRejectedCheckBox;
     private JButton applyButton;
     private JButton cancelButton;
 
@@ -132,7 +134,14 @@ public class FiltersFrame extends JFrame {
         includeResolvedCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
         includeResolvedCheckBox.setSelected(user.getUserFilters().isIncludeResolved());
 
+        // Include Rejected
+        includeRejectedCheckBox = new JCheckBox("Include Rejected CVEs");
+        includeRejectedCheckBox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        includeRejectedCheckBox.setSelected(user.getUserFilters().isIncludeRejected());
+
         filtersPanel.add(includeResolvedCheckBox);
+        filtersPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+        filtersPanel.add(includeRejectedCheckBox);
 
         // Add filtersPanel to mainPanel
         mainPanel.add(filtersPanel, BorderLayout.CENTER);
@@ -163,17 +172,25 @@ public class FiltersFrame extends JFrame {
         String selectedSeverity = severityComboBox.getSelectedItem().toString();
         List<String> selectedProducts = productList.getSelectedValuesList().stream()
             .collect(Collectors.toList());
-
-        // Retrieve include resolved option
         boolean includeResolved = includeResolvedCheckBox.isSelected();
+        boolean includeRejected = includeRejectedCheckBox.isSelected();
 
-        // Update the user's filters
-        user.setUserFilters(new UserFilters(
+        UserFilters updatedFilters = new UserFilters(
             selectedOS,
             selectedSeverity,
             selectedProducts,
-            includeResolved
-        ));
+            includeResolved,
+            includeRejected
+        );
+
+        // Update the user's filters
+        user.setUserFilters(updatedFilters);
+
+        // Update the session with the new filters
+        SessionManager.saveUserSession(user);
+
+        // Update the filters in the database
+        controller.getDatabaseService().updateUserFilters(user.getUserId(), updatedFilters);
 
         // Reset the CVE table
         controller.reloadCVEData();
