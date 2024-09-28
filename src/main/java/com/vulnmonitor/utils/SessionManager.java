@@ -96,6 +96,7 @@ public class SessionManager {
         }
     
         // Set session expiry date to 1 month from now
+        // LocalDate expiryDate = LocalDate.now().plusDays(1); // For the tester
         LocalDate expiryDate = LocalDate.now().plusMonths(1);
         prefs.put("sessionExpiry", expiryDate.format(DateTimeFormatter.ISO_DATE));
     }

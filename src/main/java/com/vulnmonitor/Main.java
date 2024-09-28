@@ -223,7 +223,7 @@ public class Main {
             mainFrame.setButtonsStatus(true);
 
             // Start fetching data
-            startCVEFetching(false);
+            startCVEFetching(true);
         } else {
             mainFrame.showMessage("Invalid credentials. Please try again.", "Login Failed", JOptionPane.ERROR_MESSAGE);
         }
