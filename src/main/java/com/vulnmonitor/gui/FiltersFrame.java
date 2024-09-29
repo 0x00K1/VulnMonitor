@@ -168,6 +168,10 @@ public class FiltersFrame extends JFrame {
      * Applies the selected filters and updates the CVE data.
      */
     private void applyFilters() {
+        if (!controller.checkService.isInternetAvailable() || !controller.checkService.isSystemDateCorrect()) {
+            controller.mainFrame.showMessage("Connection cannot be established due to internet or system date issues.", "ERROR", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         String selectedOS = osComboBox.getSelectedItem().toString();
         String selectedSeverity = severityComboBox.getSelectedItem().toString();
         List<String> selectedProducts = productList.getSelectedValuesList().stream()
@@ -183,14 +187,14 @@ public class FiltersFrame extends JFrame {
             includeRejected
         );
 
+        // Update the filters in the database
+        controller.getDatabaseService().updateUserFilters(user.getUserId(), updatedFilters);
+
         // Update the user's filters
         user.setUserFilters(updatedFilters);
 
         // Update the session with the new filters
         SessionManager.saveUserSession(user);
-
-        // Update the filters in the database
-        controller.getDatabaseService().updateUserFilters(user.getUserId(), updatedFilters);
 
         // Reset the CVE table
         controller.reloadCVEData();

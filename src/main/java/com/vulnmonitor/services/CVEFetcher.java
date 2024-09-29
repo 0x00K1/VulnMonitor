@@ -16,6 +16,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.text.ParseException;
 
 public class CVEFetcher {
 
@@ -23,7 +24,7 @@ public class CVEFetcher {
     private static final String MITRE_API_BASE_URL = "https://cveawg.mitre.org/api/cve/";
 
     // Fetch basic CVEs from NVD API and augment with details from MITRE API
-    public List<CVE> fetchLatestCVEs(String lastModStartDate, String lastModEndDate) throws Exception {
+    public List<CVE> fetchLatestCVEs(String lastModStartDate, String lastModEndDate) throws IOException, ParseException {
         List<CVE> cveList = new ArrayList<>();
 
         // Construct API URL with start and end dates
@@ -32,7 +33,7 @@ public class CVEFetcher {
 
         // Fetch CVEs from NVD API
         APIUtils apiUtils = new APIUtils();
-        String response = apiUtils.makeAPICall(apiUrl);
+        String response = apiUtils.makeAPICallKey(apiUrl);
 
         if (response == null || response.startsWith("<")) {
             System.out.println("Error: Unexpected response from API. Response is not valid JSON.");
@@ -217,7 +218,7 @@ public class CVEFetcher {
 
         try {
             APIUtils apiUtils = new APIUtils();
-            String response = apiUtils.makeAPICall(apiUrl);
+            String response = apiUtils.makeAPICallKey(apiUrl);
 
             if (response == null || response.startsWith("<") || response.isEmpty()) {
                 System.out.println("Error: Unexpected response from API. Response is not valid JSON.");
@@ -259,5 +260,50 @@ public class CVEFetcher {
         }
 
         return cveList;
+    }
+
+    // Method to check if the connection to the NVD and MITRE APIs is working and the API key is valid
+    public boolean isApiConnectionValid() {
+        return isNVDConnectionValid() && isMITREConnectionValid();
+    }
+
+    // Helper method to check if the NVD connection is valid and the API key is working
+    private boolean isNVDConnectionValid() {
+        try {
+            String testUrl = NVD_API_BASE_URL + "?startIndex=0&resultsPerPage=1";  // Testing with minimal data request
+            APIUtils apiUtils = new APIUtils();
+            String response = apiUtils.makeAPICallKey(testUrl);  // Ensure we use the API key here
+
+            if (response == null || response.startsWith("<")) {
+                System.out.println("Error: Unexpected response from NVD API. Response is not valid JSON.");
+                return false;
+            }
+
+            // If response is valid, return true
+            return true;
+        } catch (Exception e) {
+            // System.out.println("Error connecting to NVD API: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // Helper method to check if the MITRE API connection is valid
+    private boolean isMITREConnectionValid() {
+        try {
+            String testUrl = MITRE_API_BASE_URL + "CVE-2020-8515";  // Testing with a valid CVE ID
+            APIUtils apiUtils = new APIUtils();
+            String response = apiUtils.makeAPICall(testUrl);  // MITRE doesn't require an API key
+
+            if (response == null || response.startsWith("<")) {
+                System.out.println("Error: Unexpected response from MITRE API. Response is not valid JSON.");
+                return false;
+            }
+
+            // If response is valid, return true
+            return true;
+        } catch (Exception e) {
+            // System.out.println("Error connecting to MITRE API: " + e.getMessage());
+            return false;
+        }
     }
 }

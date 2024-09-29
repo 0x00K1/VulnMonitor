@@ -12,14 +12,27 @@ public class APIUtils {
 
     private static final String API_KEY = "";
 
+    // Method to make API call with API key
+    public String makeAPICallKey(String url) {
+        return makeAPICall(url, true);
+    }
+
+    // Method to make API call without API key
     public String makeAPICall(String url) {
+        return makeAPICall(url, false);
+    }
+
+    // General method to handle both types of API calls
+    private String makeAPICall(String url, boolean includeApiKey) {
         String result = null;
 
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             HttpGet request = new HttpGet(url);
 
-            // Add the API key to the request header
-            request.addHeader("apiKey", API_KEY);
+            // Conditionally add the API key to the request header if needed
+            if (includeApiKey) {
+                request.addHeader("apiKey", API_KEY);
+            }
 
             HttpResponse response = httpClient.execute(request);
 

@@ -625,7 +625,7 @@ public class MainFrame extends JFrame {
                     JOptionPane.INFORMATION_MESSAGE);
             }
         } else {
-            showMessage("Please enter a CVE ID or keyword to search.", "Search Input Required", JOptionPane.WARNING_MESSAGE);
+            showMessage("Please enter a CVE ID to search.", "Search Input Required", JOptionPane.WARNING_MESSAGE);
         }
     }    
 
