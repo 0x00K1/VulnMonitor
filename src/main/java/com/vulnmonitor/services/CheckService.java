@@ -2,6 +2,7 @@ package com.vulnmonitor.services;
 
 import javax.swing.*;
 
+import com.vulnmonitor.Main;
 import com.vulnmonitor.utils.APIUtils;
 
 import java.net.URI;
@@ -22,21 +23,15 @@ public class CheckService {
     private static final int CHECK_INTERVAL_SECONDS = 15; // Interval between checks
     private static final int EXIT_DELAY_SECONDS = 10; // Delay before exiting after showing the message
 
+    private Main controller;
     private DatabaseService databaseService;
     private CVEFetcher cveFetcher;
 
-    public CheckService(boolean start, DatabaseService databaseService, CVEFetcher cveFetcher) {
+    public CheckService(Main controller, boolean start, DatabaseService databaseService, CVEFetcher cveFetcher) {
+        this.controller = controller;
         this.databaseService = databaseService;
         this.cveFetcher = cveFetcher;
         if (start) performInitialCheck();
-    }
-    
-    /**
-     * Default constructor. Does not perform the immediate check.
-     */
-    public CheckService(DatabaseService databaseService, CVEFetcher cveFetcher) {
-        this.databaseService = databaseService;
-        this.cveFetcher = cveFetcher;
         startPeriodicChecks();
     }
 
@@ -150,6 +145,7 @@ public class CheckService {
             dialog.setAlwaysOnTop(true);
             dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
             dialog.setVisible(true);
+            controller.isFirstFetch = false;
 
             // Schedule the dialog to close and exit after EXIT_DELAY_SECONDS
             Executors.newSingleThreadScheduledExecutor().schedule(() -> {

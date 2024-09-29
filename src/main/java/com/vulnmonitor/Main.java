@@ -22,18 +22,18 @@ import java.util.concurrent.*;
 public class Main {
 
     // Controller components
-    public CheckService checkService;
-    public MainFrame mainFrame;
     private DatabaseService databaseService;
     private CVEFetcher cveFetcher;
+    public CheckService checkService;
+    private ExecutorService fetcherExecutor;
+    private ScheduledExecutorService scheduler;
+    public MainFrame mainFrame;
     private User user;
     private LoginFrame loginFrame;
     private FiltersFrame filtersFrame;
     private String lastModEndDate;
     private CompletableFuture<Void> currentFetchTask;
-    private ScheduledExecutorService scheduler;
-    private ExecutorService fetcherExecutor;
-    private boolean isFirstFetch = true;
+    public boolean isFirstFetch = true;
 
     /**
      * Entry point for the application. [Here We Go!]
@@ -45,27 +45,27 @@ public class Main {
             JOptionPane.showMessageDialog(null, "UIManager failed.", "Error", JOptionPane.ERROR_MESSAGE);
             System.exit(0);
         }
-        Main mainApp = new Main();
-        SwingUtilities.invokeLater(mainApp::startApp);
-        Runtime.getRuntime().addShutdownHook(new Thread(mainApp::shutdown));
+        Main controller = new Main(); // Always pass this object, do not create another instance [NEVER]. We call it the "controller".
+        SwingUtilities.invokeLater(controller::startApp);
+        Runtime.getRuntime().addShutdownHook(new Thread(controller::shutdown));
+    }
+
+    public Main() {
+        this.databaseService = new DatabaseService();
+        this.cveFetcher = new CVEFetcher();
+        this.checkService = new CheckService(this, true, databaseService, cveFetcher);
+        this.fetcherExecutor = Executors.newSingleThreadExecutor();
+        this.scheduler = Executors.newScheduledThreadPool(1);
+        this.lastModEndDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(new Date());
     }
 
     /**
      * Initializes the application.
      */
     public void startApp() {
-        databaseService = new DatabaseService();
-        cveFetcher = new CVEFetcher();
-        new CheckService(true, databaseService, cveFetcher);
-        checkService = new CheckService(databaseService, cveFetcher);
-        scheduler = Executors.newScheduledThreadPool(1);
-        fetcherExecutor = Executors.newSingleThreadExecutor();
 
         // Initialize user data
         initializeUser();
-
-        // Initialize lastModEndDate with current date
-        lastModEndDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(new Date());
 
         // Initialize the View
         mainFrame = new MainFrame(this, user);
