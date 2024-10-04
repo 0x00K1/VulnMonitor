@@ -1,7 +1,6 @@
 package com.vulnmonitor.services;
 
 import javax.swing.*;
-
 import com.vulnmonitor.Main;
 import com.vulnmonitor.utils.APIUtils;
 
@@ -22,33 +21,38 @@ public class CheckService {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static final int CHECK_INTERVAL_SECONDS = 15; // Interval between checks
     private static final int EXIT_DELAY_SECONDS = 10; // Delay before exiting after showing the message
+    private static final int RETRY_COUNT = 3; // Number of retries for transient failures
 
     private Main controller;
     private DatabaseService databaseService;
     private CVEFetcher cveFetcher;
 
-    public CheckService(Main controller, boolean start, DatabaseService databaseService, CVEFetcher cveFetcher) {
+    public CheckService(Main controller, DatabaseService databaseService, CVEFetcher cveFetcher) {
         this.controller = controller;
         this.databaseService = databaseService;
         this.cveFetcher = cveFetcher;
-        if (start) performInitialCheck();
         startPeriodicChecks();
     }
 
     /**
      * Performs an initial check for internet, system date correctness, database connection, and API validity.
-     * If any check fails, shows an error message and exits the application.
+     * Returns true if all checks pass, false otherwise.
      */
-    private void performInitialCheck() {
+    public boolean performInitialCheck() {
         if (!isInternetAvailable()) {
-            showErrorAndExit("Failed to establish an internet connection. Please check your network settings and ensure you have a stable connection. The application will now exit.", "Connection Error");
+            showErrorAndExit("Failed to establish an internet connection. Please check your network settings and ensure you have a stable connection. The application will exit.", "Connection Error");
+            return false;
         } else if (!isSystemDateCorrect()) {
-            showErrorAndExit("Detected incorrect system date/time. Please adjust your system clock to the correct date and time. The application will now exit.", "Date Error");
+            showErrorAndExit("Detected incorrect system date/time. Please adjust your system clock to the correct date and time. The application will exit.", "Date Error");
+            return false;
         } else if (!isDatabaseConnected()) {
-            showErrorAndExit("Failed to establish a connection to the database. Please check your database configuration. The application will now exit.", "Database Error");
+            showErrorAndExit("Failed to establish a connection to the database. Please check your database configuration. The application will exit.", "Database Error");
+            return false;
         } else if (!isFetcherApiValid()) {
-            showErrorAndExit("Failed to validate the NVD API or the Fetcher URL. Please check your API and fetcher settings. The application will now exit.", "API Error");
+            showErrorAndExit("Failed to validate the NVD API or the Fetcher URL. Please check your API and fetcher settings. The application will exit.", "API Error");
+            return false;
         }
+        return true; // All checks passed
     }
 
     /**
@@ -57,7 +61,7 @@ public class CheckService {
     private void startPeriodicChecks() {
         scheduler.scheduleAtFixedRate(() -> {
             try {
-                internetAvailable = isInternetAvailable();
+                internetAvailable = isInternetAvailableWithRetry();
                 systemDateCorrect = isSystemDateCorrect();
                 databaseConnected = isDatabaseConnected();
                 fetcherApiValid = isFetcherApiValid();
@@ -66,7 +70,7 @@ public class CheckService {
                 if (!internetAvailable) {
                     showErrorAndExit("Internet connection lost. The application will exit.", "Connection Error");
                 } else if (!systemDateCorrect) {
-                    showErrorAndExit("System date/time detected as incorrect. Please correct it to continue using the application. The application will now exit.", "Date Error");
+                    showErrorAndExit("System date/time detected as incorrect. Please correct it to continue using the application. The application will exit.", "Date Error");
                 } else if (!databaseConnected) {
                     showErrorAndExit("Database connection lost. Please check your database configuration. The application will exit.", "Database Error");
                 } else if (!fetcherApiValid) {
@@ -78,9 +82,28 @@ public class CheckService {
         }, CHECK_INTERVAL_SECONDS, CHECK_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
+    /**
+     * Checks if internet is available with retries.
+     *
+     * @return true if internet is available, false otherwise
+     */
+    private boolean isInternetAvailableWithRetry() {
+        for (int i = 0; i < RETRY_COUNT; i++) {
+            if (isInternetAvailable()) {
+                return true;
+            }
+            // Wait before retrying
+            try {
+                TimeUnit.SECONDS.sleep(5);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        return false;
+    }
+
     public boolean isInternetAvailable() {
         try {
-            // Primary check using a simple connection
             URI uri = new URI("http://www.google.com");
             URL url = uri.toURL();
             HttpURLConnection urlConnect = (HttpURLConnection) url.openConnection();
@@ -94,14 +117,14 @@ public class CheckService {
 
     public boolean isSystemDateCorrect() {
         try {
-            String response = new APIUtils().makeAPICall("http://worldclockapi.com/api/json/utc/now");
+            String response = new APIUtils().makeAPICall("https://timeapi.io/api/Time/current/zone?timeZone=UTC");
 
             // Extract the current UTC time from the response
-            if (response != null && response.contains("\"currentDateTime\":\"")) {
-                String dateString = response.split("\"currentDateTime\":\"")[1].split("\"")[0];
+            if (response != null && response.contains("\"dateTime\":\"")) {
+                String dateString = response.split("\"dateTime\":\"")[1].split("\"")[0];
 
                 // Parse the fetched date
-                SimpleDateFormat utcDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'");
+                SimpleDateFormat utcDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
                 utcDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));  // Ensure parsing as UTC
                 Date onlineDate = utcDateFormat.parse(dateString);
 
@@ -109,8 +132,7 @@ public class CheckService {
                 long diff = Math.abs(onlineDate.getTime() - System.currentTimeMillis());
                 return diff < TimeUnit.MINUTES.toMillis(5);
             } else {
-                // If the API response is invalid, consider the system date incorrect
-                return false;
+                return false;  // If the API response is invalid, consider the system date incorrect
             }
         } catch (Exception e) {
             return false;  // If there's an error, consider the system date incorrect

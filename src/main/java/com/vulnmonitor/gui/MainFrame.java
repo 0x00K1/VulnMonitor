@@ -67,6 +67,8 @@ public class MainFrame extends JFrame {
         setLocationRelativeTo(null); // Center the frame on the screen
         setResizable(false);
     
+        setApplicationIcon();
+
         // Disable maximization by limiting window state changes
         addWindowStateListener(e -> {
             if (e.getNewState() == Frame.MAXIMIZED_BOTH) {
@@ -79,6 +81,12 @@ public class MainFrame extends JFrame {
     
         setVisible(true);
     }    
+
+    private void setApplicationIcon() {
+        ImageIcon icon = new ImageIcon(getClass().getResource("/VulnMonitorICON.png"));
+        Image image = icon.getImage().getScaledInstance(120, 120, Image.SCALE_SMOOTH);
+        setIconImage(image);
+    }
 
     /**
      * Initializes all UI components and layouts.

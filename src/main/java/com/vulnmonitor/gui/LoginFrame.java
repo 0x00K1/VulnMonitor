@@ -112,13 +112,13 @@ public class LoginFrame extends JFrame {
 
         // Input validation
         if (usernameOrEmail.isEmpty() || password.isEmpty() || verificationInput.isEmpty()) {
-            controller.mainFrame.showMessage("Please fill in all fields.", "Input Error", JOptionPane.WARNING_MESSAGE);
+            controller.mainFrame.showMessage("Fill in all fields.", "Input Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         // Verify the verification code
-        if (!verificationInput.equalsIgnoreCase(verificationCode)) {
-            controller.mainFrame.showMessage("Incorrect verification code. Please try again.", "Verification Error", JOptionPane.ERROR_MESSAGE);
+        if (!verificationInput.equals(verificationCode)) {
+            controller.mainFrame.showMessage("Incorrect verification code.", "Verification Error", JOptionPane.ERROR_MESSAGE);
             // Regenerate the verification code
             verificationCode = generateVerificationCode();
             usernameField.setText("");
@@ -152,14 +152,14 @@ public class LoginFrame extends JFrame {
     private JTextField createTextField(int maxLength) {
         JTextField textField = new JTextField();
         textField.setFont(new Font("Arial", Font.PLAIN, 16));
-        ((AbstractDocument) textField.getDocument()).setDocumentFilter(new Main.LengthFilter(maxLength));
+        ((AbstractDocument) textField.getDocument()).setDocumentFilter(new Main.LengthFilter(maxLength));  // Use Main.LengthFilter
         return textField;
     }
 
     private JPasswordField createPasswordField(int maxLength) {
         JPasswordField passwordField = new JPasswordField();
         passwordField.setFont(new Font("Arial", Font.PLAIN, 16));
-        ((AbstractDocument) passwordField.getDocument()).setDocumentFilter(new Main.LengthFilter(maxLength));
+        ((AbstractDocument) passwordField.getDocument()).setDocumentFilter(new Main.LengthFilter(maxLength));  // Use Main.LengthFilter
         return passwordField;
     }
 
@@ -170,12 +170,12 @@ public class LoginFrame extends JFrame {
      */
     private String generateVerificationCode() {
         int length = 6;
-        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";  // Include lowercase letters
         Random random = new Random();
         StringBuilder code = new StringBuilder();
-        for(int i=0; i<length; i++) {
+        for (int i = 0; i < length; i++) {
             code.append(chars.charAt(random.nextInt(chars.length())));
         }
         return code.toString();
-    }
+    }    
 }
