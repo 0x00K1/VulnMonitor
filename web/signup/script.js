@@ -10,6 +10,7 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
   let isValid = true;
 
   // Username validation (length between 3 and 20 characters and only letters and numbers)
+  const username = document.getElementById('username').value;
   const usernamePattern = /^[a-zA-Z0-9]+$/;
   if (username.length < 3 || username.length > 20 || !usernamePattern.test(username)) {
     document.getElementById('usernameError').innerText = "Username must be between 3 and 20 characters and contain only letters and numbers.";
@@ -28,7 +29,7 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
 
   // Password validation (at least one letter, one digit, one special character, and minimum length of 10)
   const password = document.getElementById('password').value;
-  const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{10,}$/;
+  const passwordPattern = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_]).{10,}$/;
   if (!passwordPattern.test(password)) {
     document.getElementById('passwordError').innerText = "Password must be at least 10 characters, include a letter, number, and special character.";
     document.getElementById('passwordError').classList.remove('hidden');
