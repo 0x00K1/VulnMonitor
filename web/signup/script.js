@@ -1,11 +1,11 @@
 document.getElementById('signupForm').addEventListener('submit', function(event) {
+  // Prevent default submission to handle validation manually
   event.preventDefault();
 
   document.getElementById('usernameError').classList.add('hidden');
   document.getElementById('emailError').classList.add('hidden');
   document.getElementById('passwordError').classList.add('hidden');
   document.getElementById('confirmPasswordError').classList.add('hidden');
-  document.getElementById('successMessage').classList.add('hidden');
 
   let isValid = true;
 
@@ -44,9 +44,8 @@ document.getElementById('signupForm').addEventListener('submit', function(event)
     isValid = false;
   }
 
-  // If all validations pass, submit the form
+  // If all validations pass, proceed with form submission
   if (isValid) {
-    document.getElementById('successMessage').classList.remove('hidden');
-    document.getElementById('signupForm').submit(); // Submit the form if valid
+    document.getElementById('signupForm').submit();
   }
 });

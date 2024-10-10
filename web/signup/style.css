@@ -1,39 +1,84 @@
-@layer base {
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: var(--background);
-      color: var(--foreground);
-    }
-  
-    input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px var(--ring);
-    }
-  
-    button:focus {
-      outline: none;
-      box-shadow: 0 0 0 3px var(--ring);
-    }
-  }
-  
-  /* Custom styles for button hover */
-  button:hover {
-    background-color: rgba(29, 78, 216, 0.9);
-    cursor: pointer;
-  }
-  
-  /* Input field error styling */
-  .error-input {
-    border-color: red;
-  }
-  
-  .error-text {
-    color: red;
-    font-size: 0.9rem;
-  }
-  
-  /* Form card box shadow */
-  .shadow-lg {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }   
+:root {
+  --background: #ffffff; /* White page background */
+  --foreground: #000000; /* Black text */
+  --primary-foreground: #ffffff; /* White text on buttons */
+  --card: #0f0f0f; /* Dark card background */
+  --input: #ffffff; /* White input background */
+  --border: #4c4c4c; /* Input border */
+  --destructive: #e63946; /* Red for error messages */
+  --muted-foreground: #6b7280;
+  --ring: #146ed2; /* Blue color for focus rings */
+}
+
+/* Card Styling */
+.card {
+  background-color: var(--card);
+  color: var(--foreground);
+  padding: 2rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); /* Strong shadow for visibility */
+}
+
+/* Gradient Button Styling */
+.gradient-button {
+  background: linear-gradient(90deg, #146ed2, #29a3e6, #1ac1e6); /* Blue gradient like the shield */
+  color: var(--primary-foreground);
+}
+
+/* Hover and focus styling */
+.hover\:bg-primary\/80:hover {
+  background-color: rgba(20, 110, 210, 0.8);
+}
+
+/* Input focus ring color */
+.focus\:ring-primary {
+  --tw-ring-color: var(--ring);
+}
+
+/* Button focus ring offset */
+.focus\:ring-offset-2 {
+  --tw-ring-offset-width: 2px;
+  --tw-ring-offset-color: var(--background);
+}
+
+/* Body background */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+/* Input focus styling */
+input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* Button focus styling */
+button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* Custom styles for button hover */
+button:hover {
+  background-color: rgba(29, 78, 216, 0.9);
+  cursor: pointer;
+}
+
+/* Error text styles */
+.text-destructive, .error-text {
+  color: red; /* Set to red to be visible on the dark background */
+  font-size: 0.9rem;
+}
+
+/* Input field error styling */
+.error-input {
+  border-color: red;
+}
+
+/* Form card box shadow */
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}

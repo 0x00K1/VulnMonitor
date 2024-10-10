@@ -32,8 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     // Password validation: at least one letter, one number, one special character, and minimum length of 10
-    if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{10,}$/', $password)) {
-        echo "Password must be at least 10 characters long and contain at least one uppercase letter, one lowercase letter, and one number.";
+    if (!preg_match('/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[\W_]).{10,}$/', $password)) {
+        echo "Password must be at least 10 characters, include a letter, number, and special character.";
         exit;
     }
 
@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $stmt->store_result();
 
     if ($stmt->num_rows > 0) {
-        echo "Username or email already exists.";
+        echo "SignUp Failed: Username or email already exists.";
         exit;
     }
 
@@ -56,9 +56,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $stmt->bind_param("sss", $username, $email, $password_hash);
 
     if ($stmt->execute()) {
-        echo "Signup successful!";
+        header("Location: done.html");
+        exit();  // Ensure no further code is executed after redirection
     } else {
-        // Log the error instead of showing it to the user
         error_log("Error during signup: " . $stmt->error);
         echo "There was an issue during signup. Please try again.";
     }
