@@ -1,9 +1,10 @@
 package com.vulnmonitor.gui;
 
 import com.vulnmonitor.Main;
-import com.vulnmonitor.model.User;;
+import com.vulnmonitor.model.User;
+import javax.swing.*;
 
-public class SettingsFrame {
+public class SettingsFrame extends JFrame {
     // private Main controller;
     // private User user;
 

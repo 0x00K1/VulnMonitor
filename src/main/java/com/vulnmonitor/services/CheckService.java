@@ -13,10 +13,11 @@ import java.util.TimeZone;
 import java.util.concurrent.*;
 
 public class CheckService {
-    private boolean internetAvailable = true;
-    private boolean systemDateCorrect = true;
-    private boolean databaseConnected = true;
-    private boolean fetcherApiValid = true;
+    private static final int maxConsecutiveFailures = 3; // Maximum allowed failures before exiting
+    private int internetFailures = 0;
+    private int dateFailures = 0;
+    private int dbFailures = 0;
+    private int apiFailures = 0;
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
     private static final int CHECK_INTERVAL_SECONDS = 15; // Interval between checks
@@ -61,19 +62,35 @@ public class CheckService {
     private void startPeriodicChecks() {
         scheduler.scheduleAtFixedRate(() -> {
             try {
-                internetAvailable = isInternetAvailableWithRetry();
-                systemDateCorrect = isSystemDateCorrect();
-                databaseConnected = isDatabaseConnected();
-                fetcherApiValid = isFetcherApiValid();
-
-                // Trigger exit if any condition fails
-                if (!internetAvailable) {
+                if (!isInternetAvailableWithRetry()) {
+                    internetFailures++;
+                } else {
+                    internetFailures = 0; // Reset on success
+                }
+                if (!isSystemDateCorrect()) {
+                    dateFailures++;
+                } else {
+                    dateFailures = 0;
+                }
+                if (!isDatabaseConnected()) {
+                    dbFailures++;
+                } else {
+                    dbFailures = 0;
+                }
+                if (!isFetcherApiValid()) {
+                    apiFailures++;
+                } else {
+                    apiFailures = 0;
+                }
+    
+                // Trigger exit if any condition fails consecutively beyond threshold
+                if (internetFailures >= maxConsecutiveFailures) {
                     showErrorAndExit("Internet connection lost. The application will exit.", "Connection Error");
-                } else if (!systemDateCorrect) {
+                } else if (dateFailures >= maxConsecutiveFailures) {
                     showErrorAndExit("System date/time detected as incorrect. Please correct it to continue using the application. The application will exit.", "Date Error");
-                } else if (!databaseConnected) {
+                } else if (dbFailures >= maxConsecutiveFailures) {
                     showErrorAndExit("Database connection lost. Please check your database configuration. The application will exit.", "Database Error");
-                } else if (!fetcherApiValid) {
+                } else if (apiFailures >= maxConsecutiveFailures) {
                     showErrorAndExit("NVD API or Fetcher URL validation failed. Please check your API and fetcher settings. The application will exit.", "API Error");
                 }
             } catch (Exception e) {
@@ -116,28 +133,45 @@ public class CheckService {
     }
 
     public boolean isSystemDateCorrect() {
-        try {
-            String response = new APIUtils().makeAPICall("https://timeapi.io/api/Time/current/zone?timeZone=UTC");
-
-            // Extract the current UTC time from the response
-            if (response != null && response.contains("\"dateTime\":\"")) {
-                String dateString = response.split("\"dateTime\":\"")[1].split("\"")[0];
-
-                // Parse the fetched date
-                SimpleDateFormat utcDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-                utcDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));  // Ensure parsing as UTC
-                Date onlineDate = utcDateFormat.parse(dateString);
-
-                // Compare it to the system date (allowing a difference of a few minutes)
-                long diff = Math.abs(onlineDate.getTime() - System.currentTimeMillis());
-                return diff < TimeUnit.MINUTES.toMillis(5);
-            } else {
-                return false;  // If the API response is invalid, consider the system date incorrect
+        int maxRetries = 3;
+        int retryDelaySeconds = 5;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                String response = new APIUtils().makeAPICall("https://timeapi.io/api/Time/current/zone?timeZone=UTC");
+    
+                // Extract the current UTC time from the response
+                if (response != null && response.contains("\"dateTime\":\"")) {
+                    String dateString = response.split("\"dateTime\":\"")[1].split("\"")[0];
+    
+                    // Parse the fetched date
+                    SimpleDateFormat utcDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                    utcDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));  // Ensure parsing as UTC
+                    Date onlineDate = utcDateFormat.parse(dateString);
+    
+                    // Compare it to the system date (allowing a difference of a few minutes)
+                    long diff = Math.abs(onlineDate.getTime() - System.currentTimeMillis());
+                    return diff < TimeUnit.MINUTES.toMillis(5);
+                } else {
+                    // Invalid response; consider retrying
+                    System.out.println("Invalid response received. Attempt " + attempt + " of " + maxRetries);
+                }
+            } catch (Exception e) {
+                System.out.println("Exception during isSystemDateCorrect. Attempt " + attempt + " of " + maxRetries);
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            return false;  // If there's an error, consider the system date incorrect
+    
+            // Wait before the next retry
+            try {
+                TimeUnit.SECONDS.sleep(retryDelaySeconds);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
         }
-    }
+    
+        // All retries failed
+        return false;
+    }    
 
     public boolean isDatabaseConnected() {
         try {

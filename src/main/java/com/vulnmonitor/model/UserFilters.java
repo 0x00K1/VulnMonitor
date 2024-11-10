@@ -1,5 +1,6 @@
 package com.vulnmonitor.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
 public class UserFilters {
@@ -9,7 +10,11 @@ public class UserFilters {
     private boolean includeResolved;
     private boolean includeRejected;
 
-    // Constructor
+    // Default no-args constructor
+    public UserFilters() {
+    }
+
+    // Parameterized constructor
     public UserFilters(String osFilter, String severityFilter, List<String> productFilters, boolean includeResolved, boolean includeRejected) {
         this.osFilter = osFilter;
         this.severityFilter = severityFilter;
@@ -61,11 +66,12 @@ public class UserFilters {
     }
 
     // Method to get formatted filter information
+    @JsonIgnore
     public String getFiltersInfo() {
         return "OS Filter: " + osFilter +
-                "\nSeverity Filter: " + severityFilter +
-                "\nProduct Filters: " + String.join(", ", productFilters) +
-                "\nInclude Resolved: " + includeResolved +
-                "\nInclude Rejected: " + includeRejected;
+               "\nSeverity Filter: " + severityFilter +
+               "\nProduct Filters: " + String.join(", ", productFilters) +
+               "\nInclude Resolved: " + includeResolved +
+               "\nInclude Rejected: " + includeRejected;
     }
 }

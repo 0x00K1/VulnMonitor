@@ -1,24 +1,36 @@
 package com.vulnmonitor.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.Date;
 
 public class UserSettings {
-    private boolean notifications;
+    // Renamed fields to match JSON properties
+    private boolean sysNotificationsEnabled;
+    private boolean soundAlertEnabled;
     private Date lastLogin;
-    private boolean darkMode;
-    private boolean startup;
+    private boolean darkModeEnabled;
+    private boolean startUpEnabled;
 
-    // Constructor
-    public UserSettings(boolean notifications, Date lastLogin, boolean darkMode, boolean startup) {
-        this.notifications = notifications;
+    // Default no-args constructor
+    public UserSettings() {
+    }
+
+    // Parameterized constructor
+    public UserSettings(boolean sysNotificationsEnabled, boolean soundAlertEnabled, Date lastLogin, boolean darkModeEnabled, boolean startUpEnabled) {
+        this.sysNotificationsEnabled = sysNotificationsEnabled;
+        this.soundAlertEnabled = soundAlertEnabled;
         this.lastLogin = lastLogin;
-        this.darkMode = darkMode;
-        this.startup = startup;
+        this.darkModeEnabled = darkModeEnabled;
+        this.startUpEnabled = startUpEnabled;
     }
 
     // Getter methods
-    public boolean isNotificationsEnabled() {
-        return notifications;
+    public boolean isSysNotificationsEnabled() {
+        return sysNotificationsEnabled;
+    }
+
+    public boolean isSoundAlertEnabled() {
+        return soundAlertEnabled;
     }
 
     public Date getLastLogin() {
@@ -26,35 +38,41 @@ public class UserSettings {
     }
 
     public boolean isDarkModeEnabled() {
-        return darkMode;
+        return darkModeEnabled;
     }
-    
+
     public boolean isStartUpEnabled() {
-        return startup;
+        return startUpEnabled;
     }
 
     // Setter methods
-    public void setNotificationsEnabled(boolean notifications) {
-        this.notifications = notifications;
+    public void setSysNotificationsEnabled(boolean sysNotificationsEnabled) {
+        this.sysNotificationsEnabled = sysNotificationsEnabled;
+    }
+
+    public void setSoundAlertEnabled(boolean soundAlertEnabled) {
+        this.soundAlertEnabled = soundAlertEnabled;
     }
 
     public void setLastLogin(Date lastLogin) {
         this.lastLogin = lastLogin;
     }
 
-    public void setDarkModeEnabled(boolean darkMode) {
-        this.darkMode = darkMode;
+    public void setDarkModeEnabled(boolean darkModeEnabled) {
+        this.darkModeEnabled = darkModeEnabled;
     }
-    
-    public void setStartUpEnabled(boolean startup) {
-        this.startup = startup;
+
+    public void setStartUpEnabled(boolean startUpEnabled) {
+        this.startUpEnabled = startUpEnabled;
     }
 
     // Method to get formatted user settings information
+    @JsonIgnore
     public String getUserSettings() {
-        return "\nNotifications Enabled: " + notifications +
-                "\nLast Login: " + lastLogin +
-                "\nDark Mode Enabled: " + darkMode +
-        		"\nStartup Enabled: " + startup;
+        return "\nSystem Notifications Enabled: " + sysNotificationsEnabled +
+               "\nSound Alert: " + soundAlertEnabled +
+               "\nLast Login: " + lastLogin +
+               "\nDark Mode Enabled: " + darkModeEnabled +
+               "\nStartup Enabled: " + startUpEnabled;
     }
 }

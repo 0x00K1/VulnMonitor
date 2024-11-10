@@ -18,10 +18,11 @@
         </dependency>
 
         <!-- HTTP Client dependency for making API requests -->
+        <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.5.13</version>
+            <version>4.5.14</version>
         </dependency>
 
         <!-- Jackson dependency for JSON parsing -->
@@ -42,7 +43,7 @@
         <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf</artifactId>
-            <version>3.5</version>  <!-- Make sure this is the latest version -->
+            <version>3.5</version>
         </dependency> 
         
         <!-- FlatLaf IntelliJ Themes -->
@@ -52,37 +53,50 @@
             <version>3.5</version> <!-- Match this version with FlatLaf core -->
         </dependency>
     
-      <dependency>
-        <groupId>commons-httpclient</groupId>
-        <artifactId>commons-httpclient</artifactId>
-        <version>3.1</version>
-      </dependency>
-      
-      <dependency>
-  		<groupId>com.zaxxer</groupId>
- 	 	<artifactId>HikariCP</artifactId>
-  		<version>6.0.0</version>
-	  </dependency>
-	  
-	  <dependency>
-  		<groupId>org.mindrot</groupId>
-  		<artifactId>jbcrypt</artifactId>
-  		<version>0.4</version>
-	  </dependency>
-	  
-	  <dependency>
-	    <groupId>ch.qos.logback</groupId>
-	    <artifactId>logback-classic</artifactId>
-	    <version>1.5.3</version>
-	  </dependency>
-	  
-	  <dependency>
-	    <groupId>org.slf4j</groupId>
-	    <artifactId>slf4j-api</artifactId>
-	    <version>2.0.16</version>
-	  </dependency>
+        <!-- <dependency>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+            <version>3.1</version>
+        </dependency> -->
+
+        <dependency>
+            <groupId>com.zaxxer</groupId>
+            <artifactId>HikariCP</artifactId>
+            <version>6.0.0</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.mindrot</groupId>
+            <artifactId>jbcrypt</artifactId>
+            <version>0.4</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.5.3</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.16</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <version>1.6.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>5.7.1</version>
+        </dependency>
     </dependencies>
 
+    <!-- For Maven projects -->
     <build>
         <plugins>
             <!-- Maven Compiler Plugin to specify Java version -->

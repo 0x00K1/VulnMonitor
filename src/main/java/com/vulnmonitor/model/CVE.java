@@ -2,6 +2,9 @@ package com.vulnmonitor.model;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import java.util.Date;
+
 public class CVE {
     private String cveId;
     private String description;
@@ -19,6 +22,13 @@ public class CVE {
     private String capecDescription;
     private List<String> credits;
     private String cweDescription;
+    @JsonProperty("archivedAt") // Map JSON property to this field
+    private Date archivedAt;
+
+
+    // Default no-args constructor
+    public CVE() {
+    }
 
     public CVE(String cveId, String description, String severity, String affectedProduct, String platform,
                    String publishedDate, String state, String dateReserved, String dateUpdated,
@@ -42,7 +52,30 @@ public class CVE {
         this.cweDescription = cweDescription;
     }
 
- // Getters
+    public CVE(String cveId, String description, String severity, String affectedProduct, String platform,
+                   String publishedDate, String state, String dateReserved, String dateUpdated,
+                   List<String> references, List<String> affectedVersions, String cvssScore, String cvssVector,
+                   String capecDescription, List<String> credits, String cweDescription, Date archivedAt) {
+        this.cveId = cveId;
+        this.description = description;
+        this.severity = severity;
+        this.affectedProduct = affectedProduct;
+        this.platform = platform;
+        this.publishedDate = publishedDate;
+        this.state = state;
+        this.dateReserved = dateReserved;
+        this.dateUpdated = dateUpdated;
+        this.references = references;
+        this.affectedVersions = affectedVersions;
+        this.cvssScore = cvssScore;
+        this.cvssVector = cvssVector;
+        this.capecDescription = capecDescription;
+        this.credits = credits;
+        this.cweDescription = cweDescription;
+        this.archivedAt = archivedAt;
+    }
+
+    // Getters
     public String getCveId() {
         return cveId;
     }
@@ -105,6 +138,10 @@ public class CVE {
 
     public String getCweDescription() {
         return cweDescription;
+    }
+
+    public Date getArchivedAt() {
+        return archivedAt;
     }
 
     // Setters
@@ -172,6 +209,10 @@ public class CVE {
         this.cweDescription = cweDescription;
     }
 
+    public void setArchivedAt(Date archivedAt) {
+        this.archivedAt = archivedAt;
+    }
+    
     @Override
     public String toString() {
         return "CVE ID: " + cveId + "\n" +

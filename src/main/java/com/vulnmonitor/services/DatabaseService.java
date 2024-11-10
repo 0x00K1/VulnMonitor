@@ -1,24 +1,30 @@
 package com.vulnmonitor.services;
 
+import com.vulnmonitor.model.AlertItem;
 import com.vulnmonitor.model.CVE;
+import com.vulnmonitor.model.User;
 import com.vulnmonitor.model.UserAlerts;
+import com.vulnmonitor.model.UserArchives;
 import com.vulnmonitor.model.UserFilters;
 import com.vulnmonitor.model.UserSettings;
+import com.vulnmonitor.utils.EncryptionUtil;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.*;
-
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.mindrot.jbcrypt.BCrypt;
+import java.util.Date;
 
 public class DatabaseService {
 
     private static HikariDataSource dataSource;
     private final ExecutorService dbExecutor;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public DatabaseService() {
         this.dbExecutor = Executors.newCachedThreadPool();
@@ -244,23 +250,38 @@ public class DatabaseService {
      */
     public CompletableFuture<UserAlerts> getUserAlerts(int userId) {
         return executeDbTask(() -> {
-            String query = "SELECT * FROM user_alerts WHERE user_id = ?";
+            String query = "SELECT alerts_json FROM user_alerts WHERE user_id = ?";
             try (Connection connection = getConnection();
                  PreparedStatement stmt = connection.prepareStatement(query)) {
-
+    
                 stmt.setInt(1, userId);
                 ResultSet rs = stmt.executeQuery();
-
+    
                 if (rs.next()) {
-                    // Assuming UserAlerts is more complex, replace this with actual fields
-                    return new UserAlerts("Alert data for user");  // Replace with actual fields
+                    String alertsJson = rs.getString("alerts_json");
+    
+                    // Clean up the JSON by removing the alertInfo property
+                    alertsJson = removeAlertInfoFromJson(alertsJson);
+    
+                    try {
+                        List<AlertItem> alerts = objectMapper.readValue(alertsJson, objectMapper.getTypeFactory().constructCollectionType(List.class, AlertItem.class));
+                        return new UserAlerts(alerts);
+                    } catch (JsonProcessingException e) {
+                        // Handle parsing exceptions
+                        e.printStackTrace();
+                    }
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
             }
-            return null;
+            return new UserAlerts(); // Return empty alerts if none found
         });
     }
+    
+    // Helper method to remove 'alertInfo' property from the JSON string
+    private String removeAlertInfoFromJson(String json) {
+        return json.replaceAll(",\\s*\"alertInfo\"\\s*:\\s*\".*?\"", "");
+    }    
 
     /**
      * Retrieves the user settings for a given user ID asynchronously.
@@ -270,7 +291,7 @@ public class DatabaseService {
      */
     public CompletableFuture<UserSettings> getUserSettings(int userId) {
         return executeDbTask(() -> {
-            String query = "SELECT notifications_enabled, last_login, dark_mode_enabled, startup_enabled FROM user_settings WHERE user_id = ?";
+            String query = "SELECT system_notifications, sound_alert, last_login, dark_mode, startup FROM user_settings WHERE user_id = ?";
             try (Connection connection = getConnection();
                  PreparedStatement stmt = connection.prepareStatement(query)) {
 
@@ -278,13 +299,14 @@ public class DatabaseService {
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
-                    boolean notificationsEnabled = rs.getBoolean("notifications_enabled");
+                    boolean sysNotificationsEnabled = rs.getBoolean("system_notifications");
+                    boolean soundAlert = rs.getBoolean("sound_alert");
                     Timestamp lastLogin = rs.getTimestamp("last_login");
-                    boolean darkModeEnabled = rs.getBoolean("dark_mode_enabled");
-                    boolean startupEnabled = rs.getBoolean("startup_enabled");
+                    boolean darkModeEnabled = rs.getBoolean("dark_mode");
+                    boolean startupEnabled = rs.getBoolean("startup");
 
                     // Create and return the UserSettings object
-                    return new UserSettings(notificationsEnabled, lastLogin, darkModeEnabled, startupEnabled);
+                    return new UserSettings(sysNotificationsEnabled, soundAlert, lastLogin, darkModeEnabled, startupEnabled);
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -350,6 +372,60 @@ public class DatabaseService {
             return null;
         });
     }
+
+    /**
+     * Updates the user alerts asynchronously.
+     *
+     * @param userId     The user ID.
+     * @param userAlerts The new alert settings to set.
+     * @return A CompletableFuture<Void>.
+     */
+    public CompletableFuture<Void> updateUserAlerts(int userId, UserAlerts userAlerts) {
+        return executeDbTask(() -> {
+            if (userId == -1) {
+                System.out.println("Invalid user ID.");
+                return null;
+            }
+    
+            // Convert alerts to JSON
+            String alertsJson = objectMapper.writeValueAsString(userAlerts.getAlerts());
+    
+            // **Add logging**
+            //  System.out.println("Saving alertsJson to database: " + alertsJson);
+    
+            // Queries for checking, updating, and inserting alerts
+            String checkQuery = "SELECT COUNT(*) FROM user_alerts WHERE user_id = ?";
+            String updateQuery = "UPDATE user_alerts SET alerts_json = ? WHERE user_id = ?";
+            String insertQuery = "INSERT INTO user_alerts (user_id, alerts_json) VALUES (?, ?)";
+    
+            try (Connection connection = getConnection()) {
+                // Check if user alerts already exist
+                try (PreparedStatement checkStmt = connection.prepareStatement(checkQuery)) {
+                    checkStmt.setInt(1, userId);
+                    ResultSet rs = checkStmt.executeQuery();
+    
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        // User has alerts, so update them
+                        try (PreparedStatement updateStmt = connection.prepareStatement(updateQuery)) {
+                            updateStmt.setString(1, alertsJson);
+                            updateStmt.setInt(2, userId);
+                            updateStmt.executeUpdate();
+                        }
+                    } else {
+                        // No alerts found, insert new alert settings
+                        try (PreparedStatement insertStmt = connection.prepareStatement(insertQuery)) {
+                            insertStmt.setInt(1, userId);
+                            insertStmt.setString(2, alertsJson);
+                            insertStmt.executeUpdate();
+                        }
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return null;
+        });
+    }    
 
     /**
      * Saves CVE data to the database asynchronously.
@@ -421,6 +497,37 @@ public class DatabaseService {
             return null;
         });
     }
+
+     /**
+     * Saves notifications to the database asynchronously.
+     *
+     * @param userId   The user ID.
+     * @param cveList The list of CVEs that triggered the notifications.
+     * @return A CompletableFuture<Void>.
+     */
+    public CompletableFuture<Void> saveNotifications(int userId, List<CVE> cveList) {
+        return executeDbTask(() -> {
+            String insertSql = "INSERT INTO user_notifications (user_id, cve_id, message, sent_at) VALUES (?, ?, ?, NOW())";
+
+            try (Connection connection = getConnection();
+                 PreparedStatement insertStatement = connection.prepareStatement(insertSql)) {
+
+                for (CVE cve : cveList) {
+                    insertStatement.setInt(1, userId);
+                    insertStatement.setString(2, cve.getCveId());
+                    insertStatement.setString(3, cve.getDescription());
+                    insertStatement.addBatch();
+                }
+
+                insertStatement.executeBatch();
+
+            } catch (SQLException e) {
+                System.out.println("Error saving notifications to the database.");
+                e.printStackTrace();
+            }
+            return null;
+        });
+    }    
 
     // Helper method to parse date strings
     private java.sql.Date parseDate(String dateString, SimpleDateFormat dateFormatWithMillis, SimpleDateFormat dateFormatWithoutMillis, SimpleDateFormat outputDateFormat) {
@@ -621,12 +728,360 @@ public class DatabaseService {
                         e.printStackTrace();
                         throw new CompletionException(e);
                     }
-                }).thenCompose(v -> saveLastUpdateDate(currentDate))
-                  .thenApply(v -> true)
-                  .exceptionally(ex -> false);  // Indicate failure if exception occurs
+                }).thenCompose(_ -> saveLastUpdateDate(currentDate))
+                  .thenApply(_ -> true)
+                  .exceptionally(_ -> false);  // Indicate failure if exception occurs
             } else {
                 return CompletableFuture.completedFuture(false);  // No reset needed
             }
+        });
+    }
+
+    /**
+     * Saves the user session to the database asynchronously.
+     *
+     * @param user The user whose session is to be saved.
+     * @return A CompletableFuture<Void>.
+     */
+    public CompletableFuture<Void> saveUserSession(User user) {
+        return CompletableFuture.runAsync(() -> {
+            String upsertSql = "INSERT INTO user_sessions (user_id, session_data, session_expiry) VALUES (?, ?, ?) " +
+                               "ON DUPLICATE KEY UPDATE session_data = VALUES(session_data), session_expiry = VALUES(session_expiry)";
+
+            try (Connection connection = getConnection();
+                 PreparedStatement stmt = connection.prepareStatement(upsertSql)) {
+
+                stmt.setInt(1, user.getUserId());
+                String sessionData = objectMapper.writeValueAsString(user); // Serialize user object to JSON
+
+                // Encrypt session data
+                String encryptedSessionData = EncryptionUtil.encrypt(sessionData);
+                stmt.setString(2, encryptedSessionData);
+
+                LocalDate expiryDate = LocalDate.now().plusMonths(1);
+                stmt.setDate(3, java.sql.Date.valueOf(expiryDate));
+
+                stmt.executeUpdate();
+
+            } catch (SQLException | JsonProcessingException e) {
+                e.printStackTrace();
+                throw new CompletionException(e);
+            } catch (Exception e) { // For encryption exceptions
+                e.printStackTrace();
+                throw new CompletionException(e);
+            }
+        }, dbExecutor);
+    }
+
+    /**
+     * Loads the user session from the database asynchronously, including archived CVEs.
+     *
+     * @param userId The user ID.
+     * @return A CompletableFuture<User> containing the user session data, or null if not found.
+     */
+    public CompletableFuture<User> loadUserSession(int userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            String selectSql = "SELECT session_data, session_expiry FROM user_sessions WHERE user_id = ?";
+            String getArchivesSql = "SELECT * FROM user_archives WHERE user_id = ?";
+        
+            try (Connection connection = getConnection();
+                PreparedStatement sessionStmt = connection.prepareStatement(selectSql);
+                PreparedStatement archivesStmt = connection.prepareStatement(getArchivesSql)) {
+        
+                // Fetch session data
+                sessionStmt.setInt(1, userId);
+                ResultSet sessionRs = sessionStmt.executeQuery();
+        
+                if (sessionRs.next()) {
+                    String encryptedSessionData = sessionRs.getString("session_data");
+                    java.sql.Date sessionExpiry = sessionRs.getDate("session_expiry");
+        
+                    // Decrypt session data
+                    String sessionData = EncryptionUtil.decrypt(encryptedSessionData);
+        
+                    // Deserialize JSON to User object
+                    User user = objectMapper.readValue(sessionData, User.class);
+        
+                    // Check if the session has expired
+                    if (sessionExpiry.toLocalDate().isBefore(LocalDate.now())) {
+                        // Session expired, delete it
+                        deleteUserSession(userId).join();
+                        return null;
+                    }
+        
+                    // Fetch archived CVEs
+                    archivesStmt.setInt(1, userId);
+                    ResultSet archivesRs = archivesStmt.executeQuery();
+                    List<CVE> archivedCVEs = new ArrayList<>();
+                    while (archivesRs.next()) {
+                        CVE cve = extractCVEFromArchivedResultSet(archivesRs);
+                        archivedCVEs.add(cve);
+                    }
+                    user.setUserArchives(new UserArchives(archivedCVEs));
+        
+                    return user;
+                }
+        
+            } catch (SQLException | JsonProcessingException e) {
+                e.printStackTrace();
+                throw new CompletionException(e);
+            } catch (Exception e) { // For decryption exceptions
+                e.printStackTrace();
+                throw new CompletionException(e);
+            }
+        
+            return null;
+        }, dbExecutor);
+    }   
+
+    /**
+     * Deletes the user session from the database asynchronously.
+     *
+     * @param userId The user ID.
+     * @return A CompletableFuture<Void>.
+     */
+    public CompletableFuture<Void> deleteUserSession(int userId) {
+        return CompletableFuture.runAsync(() -> {
+            String deleteSql = "DELETE FROM user_sessions WHERE user_id = ?";
+
+            try (Connection connection = getConnection();
+                 PreparedStatement stmt = connection.prepareStatement(deleteSql)) {
+
+                stmt.setInt(1, userId);
+                stmt.executeUpdate();
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+                throw new CompletionException(e);
+            }
+        }, dbExecutor);
+    }
+
+    /**
+     * Retrieves the active user ID from the user_sessions table asynchronously.
+     * Assumes that only one active session exists at a time.
+     *
+     * @return A CompletableFuture<Integer> containing the active user ID, or -1 if no active session is found.
+     */
+    public CompletableFuture<Integer> getActiveUserId() {
+        return executeDbTask(() -> {
+            String sql = "SELECT user_id FROM user_sessions WHERE session_expiry >= CURDATE() ORDER BY session_expiry DESC LIMIT 1";
+            try (Connection connection = getConnection();
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
+
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    return rs.getInt("user_id");
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return -1; // No active session found
+        });
+    }
+
+    public CompletableFuture<Boolean> archiveCVE(int userId, String cveId) {
+        return executeDbTask(() -> {
+            // First, retrieve the CVE details from the cves table
+            CVE cve = getCVEById(cveId).get();
+            if (cve == null) {
+                return false; // CVE not found
+            }
+    
+            String insertSql = "INSERT INTO user_archives " +
+                    "(user_id, cve_id, description, severity, affected_product, platform, " +
+                    "published_date, state, date_reserved, date_updated, cvss_score, cvss_vector, " +
+                    "capec_description, cwe_description, cve_references, affected_versions, credits) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    // archived_at is set to CURRENT_TIMESTAMP by default
+    
+            try (Connection connection = getConnection();
+                 PreparedStatement stmt = connection.prepareStatement(insertSql)) {
+    
+                stmt.setInt(1, userId);
+                stmt.setString(2, cve.getCveId());
+                stmt.setString(3, cve.getDescription());
+                stmt.setString(4, cve.getSeverity());
+                stmt.setString(5, cve.getAffectedProduct());
+                stmt.setString(6, cve.getPlatform());
+                stmt.setDate(7, parseDate(cve.getPublishedDate()));
+                stmt.setString(8, cve.getState());
+                stmt.setDate(9, parseDate(cve.getDateReserved()));
+                stmt.setDate(10, parseDate(cve.getDateUpdated()));
+                stmt.setString(11, cve.getCvssScore());
+                stmt.setString(12, cve.getCvssVector());
+                stmt.setString(13, cve.getCapecDescription());
+                stmt.setString(14, cve.getCweDescription());
+                stmt.setString(15, String.join(",", cve.getReferences()));
+                stmt.setString(16, String.join(",", cve.getAffectedVersions()));
+                stmt.setString(17, String.join(",", cve.getCredits()));
+    
+                stmt.executeUpdate();
+                return true;
+            } catch (SQLException e) {
+                if (e.getErrorCode() == 1062) { // Duplicate entry
+                    return false; // CVE already archived for this user
+                }
+                e.printStackTrace();
+                return false;
+            }
+        });
+    }            
+
+    // Helper method to parse date strings
+    private java.sql.Date parseDate(String dateString) {
+        if (dateString == null || dateString.equalsIgnoreCase("N/A")) {
+            return null; // Skip parsing if the date is "N/A" or null
+        }
+
+        try {
+            SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd");
+            java.util.Date parsedDate = inputFormat.parse(dateString);
+            return new java.sql.Date(parsedDate.getTime());
+        } catch (java.text.ParseException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public CompletableFuture<List<CVE>> getArchivedCVEs(int userId) {
+        return executeDbTask(() -> {
+            List<CVE> archivedCVEs = new ArrayList<>();
+            String sql = "SELECT * FROM user_archives WHERE user_id = ?";
+    
+            try (Connection connection = getConnection();
+                 PreparedStatement stmt = connection.prepareStatement(sql)) {
+    
+                stmt.setInt(1, userId);
+                ResultSet rs = stmt.executeQuery();
+    
+                while (rs.next()) {
+                    CVE cve = extractCVEFromArchivedResultSet(rs);
+                    archivedCVEs.add(cve);
+                }
+    
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+    
+            return archivedCVEs;
+        });
+    }
+
+    /**
+     * Retrieves a specific archived CVE for a user asynchronously.
+     *
+     * @param userId The user ID.
+     * @param cveId  The CVE ID.
+     * @return A CompletableFuture<CVE> containing the archived CVE, or null if not found.
+     */
+    public CompletableFuture<CVE> getArchivedCVEById(int userId, String cveId) {
+        return executeDbTask(() -> {
+            String sql = "SELECT * FROM user_archives WHERE user_id = ? AND cve_id = ?";
+            try (Connection connection = getConnection();
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
+
+                stmt.setInt(1, userId);
+                stmt.setString(2, cveId);
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    return extractCVEFromArchivedResultSet(rs);
+                }
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return null;
+        });
+    }
+    
+    /**
+     * Helper method to extract CVE data from the user_archives ResultSet.
+     *
+     * @param rs The ResultSet.
+     * @return A CVE object.
+     * @throws SQLException
+     */
+    private CVE extractCVEFromArchivedResultSet(ResultSet rs) throws SQLException {
+        String cveId = rs.getString("cve_id");
+        String description = rs.getString("description");
+        String severity = rs.getString("severity");
+        String affectedProduct = rs.getString("affected_product");
+        String platform = rs.getString("platform");
+        String publishedDate = rs.getDate("published_date") != null ? rs.getDate("published_date").toString() : null;
+        String state = rs.getString("state");
+        String dateReserved = rs.getDate("date_reserved") != null ? rs.getDate("date_reserved").toString() : null;
+        String dateUpdated = rs.getDate("date_updated") != null ? rs.getDate("date_updated").toString() : null;
+        String cvssScore = rs.getString("cvss_score");
+        String cvssVector = rs.getString("cvss_vector");
+        String capecDescription = rs.getString("capec_description");
+        String cweDescription = rs.getString("cwe_description");
+        String referencesStr = rs.getString("cve_references");
+        List<String> references = (referencesStr != null && !referencesStr.isEmpty())
+                ? Arrays.asList(referencesStr.split(","))
+                : new ArrayList<>();
+        String affectedVersionsStr = rs.getString("affected_versions");
+        List<String> affectedVersions = (affectedVersionsStr != null && !affectedVersionsStr.isEmpty())
+                ? Arrays.asList(affectedVersionsStr.split(","))
+                : new ArrayList<>();
+        String creditsStr = rs.getString("credits");
+        List<String> credits = (creditsStr != null && !creditsStr.isEmpty())
+                ? Arrays.asList(creditsStr.split(","))
+                : new ArrayList<>();
+        Timestamp archivedAtTimestamp = rs.getTimestamp("archived_at");
+        Date archivedAt = (archivedAtTimestamp != null) ? new Date(archivedAtTimestamp.getTime()) : null;
+
+        return new CVE(cveId, description, severity, affectedProduct, platform, publishedDate, state, dateReserved, dateUpdated,
+        references, affectedVersions, cvssScore, cvssVector, capecDescription, credits, cweDescription, archivedAt);
+    }        
+
+   /**
+     * Unarchives a CVE for a specific user asynchronously.
+     *
+     * @param userId The ID of the user.
+     * @param cveId  The ID of the CVE to unarchive.
+     * @return A CompletableFuture<Boolean> indicating success or failure.
+     */
+    public CompletableFuture<Boolean> unarchiveCVE(int userId, String cveId) {
+        return executeDbTask(() -> {
+            String deleteSql = "DELETE FROM user_archives WHERE user_id = ? AND cve_id = ?";
+            try (Connection connection = getConnection();
+                PreparedStatement stmt = connection.prepareStatement(deleteSql)) {
+
+                stmt.setInt(1, userId);
+                stmt.setString(2, cveId);
+                int affectedRows = stmt.executeUpdate();
+                return affectedRows > 0;
+            } catch (SQLException e) {
+                e.printStackTrace();
+                return false;
+            }
+        });
+    }
+
+    /**
+     * Counts the number of archived CVEs for a specific user asynchronously.
+     *
+     * @param userId The ID of the user.
+     * @return A CompletableFuture<Integer> containing the count.
+     */
+    public CompletableFuture<Integer> countArchivedCVEs(int userId) {
+        return executeDbTask(() -> {
+            String sql = "SELECT COUNT(*) AS total FROM user_archives WHERE user_id = ?";
+            try (Connection connection = getConnection();
+                PreparedStatement stmt = connection.prepareStatement(sql)) {
+
+                stmt.setInt(1, userId);
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    return rs.getInt("total");
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            return 0;
         });
     }
 

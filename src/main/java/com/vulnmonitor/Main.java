@@ -19,24 +19,29 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class Main {
-
     // Controller components
     private DatabaseService databaseService;
     private CVEFetcher cveFetcher;
     public CheckService checkService;
+    private NotificationService notificationService;
     private ExecutorService fetcherExecutor;
     private ScheduledExecutorService scheduler;
-    private User user;
+    public User user;
     public MainFrame mainFrame;
     private LoginFrame loginFrame;
     private FiltersFrame filtersFrame;
+    private AlertsFrame alertsFrame;
+    private ArchivesFrame archivesFrame;
     private LoadingDialog loadingDialog;
     private String lastModEndDate;
     private CompletableFuture<Void> currentFetchTask;
     public boolean isFirstFetch = true;
+    public final int MAX_ARCHIVED_CVES = 100;
 
     /**
      * Entry point for the application. [Here We Go!]
@@ -49,40 +54,46 @@ public class Main {
             System.exit(0);
         }
         Main controller = new Main(); // Always pass this object, do not create another instance [NEVER]. We call it the "controller".
-        Runtime.getRuntime().addShutdownHook(new Thread(controller::shutdown));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			try {
+				controller.shutdown();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}));
     }
 
     public Main() {
         // Show the loading dialog on the Event Dispatch Thread (EDT)
         SwingUtilities.invokeLater(() -> {
             Image backgroundImage = Toolkit.getDefaultToolkit().getImage(LoadingDialog.class.getResource("/VulnMonitor.jpg"));
-            loadingDialog = new LoadingDialog(null, backgroundImage, 300, 350, true); // Custom size
-            loadingDialog.setVisible(true); // Display the dialog
+            loadingDialog = new LoadingDialog(null, backgroundImage, 300, 350, true);
+            loadingDialog.setVisible(true);
         });
-    
-        // Run initialization in a background thread outside of the SwingUtilities block
+
+        // Run initialization in a background thread
         CompletableFuture.runAsync(() -> {
             try {
-                // Initialization process (background thread)
+                // Initialize services
                 this.databaseService = new DatabaseService();
+                SessionManager.initialize(this.databaseService);
                 this.cveFetcher = new CVEFetcher();
                 this.checkService = new CheckService(this, databaseService, cveFetcher);
+                this.notificationService = new NotificationService(this);
                 this.fetcherExecutor = Executors.newSingleThreadExecutor();
                 this.scheduler = Executors.newScheduledThreadPool(1);
                 this.lastModEndDate = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(new Date());
-                
-                // Perform the checks (internet, system date, etc.)
-                boolean checksPassed = checkService.performInitialCheck();
 
-                // Only proceed if all checks passed
-                if (checksPassed) {
+                // Perform initial checks
+                if (checkService.performInitialCheck()) {
                     SwingUtilities.invokeLater(() -> {
-                        loadingDialog.dispose();  // Dispose of the loading dialog
-                        startApp();  // Start the main application
+                        loadingDialog.dispose();
+                        startApp();
                     });
+                } else {
+                    throw new Exception("Initial checks failed. Application cannot start.");
                 }
             } catch (Exception e) {
-                // Hide the loading dialog and show error on the EDT in case of failure
                 SwingUtilities.invokeLater(() -> {
                     loadingDialog.dispose();
                     JOptionPane.showMessageDialog(null, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
@@ -95,37 +106,44 @@ public class Main {
     /**
      * Initializes the application.
      */
-    public void startApp() {
-
-        // Initialize user data
-        initializeUser();
-
-        // Initialize the View
-        mainFrame = new MainFrame(this, user);
-
-        // Start fetching CVE data only if user is logged in else disable the target buttons
-        if (user.isLoggedIn()) {
-            startCVEFetching(false);
-        } else {
-            mainFrame.setButtonsStatus(false);
-        }
-    }
+    public void startApp() { initializeUser(); }
 
     /**
-     * Initializes the user data.
+     * Initializes the user data by attempting to load an existing session.
      */
     private void initializeUser() {
-        // Check if user session exists
-        if (SessionManager.isSessionValid()) {
-            // Load user data from session
-            user = SessionManager.loadUserSession();
-        } else {
-            // Create a guest user
-            user = new User(false, 0, "Guest", null,
-                    new UserFilters("ALL", "ALL", Arrays.asList("ALL"), true, true),
-                    new UserAlerts(null), new UserArchives(null),
-                    new UserSettings(true, new Date(), true, true));
-        }
+        getCurrentUserId().thenAccept(currentUserId -> {
+            if (currentUserId != -1) {
+                // Load user session from the database
+                SessionManager.loadUserSession(currentUserId).thenAccept(sessionUser -> {
+                    if (sessionUser != null && sessionUser.isLoggedIn()) {
+                        this.user = sessionUser;
+                        SwingUtilities.invokeLater(() -> {
+                            // Update the UI with the loaded session
+                            mainFrame = new MainFrame(this, user);
+                            mainFrame.setButtonsStatus(true);
+                            startCVEFetching(true);
+                        });
+                    } else {
+                        // Session invalid or not found, create a guest user
+                        createGuestUser();
+                    }
+                }).exceptionally(ex -> {
+                    ex.printStackTrace();
+                    // On exception, create a guest user
+                    createGuestUser();
+                    return null;
+                });
+            } else {
+                // No active session found, create a guest user
+                createGuestUser();
+            }
+        }).exceptionally(ex -> {
+            ex.printStackTrace();
+            // On exception, create a guest user
+            createGuestUser();
+            return null;
+        });
     }
 
     /**
@@ -136,125 +154,170 @@ public class Main {
             Desktop.getDesktop().browse(new URI("http://127.0.0.1/vulnmonitor/signup"));
         } catch (IOException | URISyntaxException e) {
             JOptionPane.showMessageDialog(mainFrame,
-                    "Unable to open browser. Please visit http://127.0.0.1/vulnmonitor/signup",
+                    "Unable to open browser. To signup, visit http://127.0.0.1/vulnmonitor/signup",
                     "Signup",
                     JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
     /**
-     * Handles user login asynchronously.
+     * Creates a guest user with default settings.
+     */
+    private void createGuestUser() {
+        this.user = new User(false, 0, "Guest", null,
+                new UserFilters("ALL", "ALL", Arrays.asList("ALL"), true, true),
+                new UserAlerts(),
+                new UserArchives(null),
+                new UserSettings(true, true, new Date(), true, true));
+
+        SwingUtilities.invokeLater(() -> {
+            mainFrame = new MainFrame(this, user);
+            mainFrame.setButtonsStatus(false);
+        });
+    }
+
+   /**
+     * Retrieves the current user's ID asynchronously.
+     *
+     * @return A CompletableFuture<Integer> containing the active user ID, or -1 if no active session exists.
+     */
+    private CompletableFuture<Integer> getCurrentUserId() {
+        return SessionManager.getCurrentUserId();
+    }
+
+   /**
+     * Handles user login asynchronously with pre-login checks.
      *
      * @param usernameOrEmail The username or email.
      * @param password        The password.
      */
     public void loginUser(String usernameOrEmail, String password) {
+        // Initialize and show the loading dialog
         LoadingDialog loadingDialog = new LoadingDialog(loginFrame, null);
         loadingDialog.setMessage("Logging in . . .");
-    
-        executeTask(() -> {
-            // Check if the internet and system date are valid
+
+        // Define the background task
+        Callable<String> loginTask = () -> {
+            // Pre-login Checks
             if (!checkService.isInternetAvailable()) {
                 return "Connection cannot be established due to internet issues.";
             }
             if (!checkService.isSystemDateCorrect()) {
                 return "Connection cannot be established due to system date issues.";
             }
-            
+
             // Authenticate the user
-            boolean isAuthenticated = databaseService.authenticate(usernameOrEmail, password).join();
+            boolean isAuthenticated = databaseService.authenticate(usernameOrEmail, password).get();
             if (!isAuthenticated) {
                 return "Invalid credentials.";
             }
-            
-            return null; // No error, login is successful
-        }, result -> {
-            loadingDialog.dispose();
-    
-            if (result == null) { // If the result is null, the login was successful
-                user.setLoggedIn(true);
-    
-                if (usernameOrEmail.contains("@")) {
-                    databaseService.getUsernameForEmail(usernameOrEmail).thenCompose(username -> {
-                        user.setUsername(username);
-                        user.setEmail(usernameOrEmail);
-                        return loadUserDetails(usernameOrEmail);
-                    });
-                } else {
-                    databaseService.getEmailForUsername(usernameOrEmail).thenCompose(email -> {
-                        user.setUsername(usernameOrEmail);
-                        user.setEmail(email);
-                        return loadUserDetails(usernameOrEmail);
-                    });
-                }
+
+            // Retrieve user ID based on username or email
+            int userId = databaseService.getUserId(usernameOrEmail).get();
+            if (userId == -1) {
+                return "User ID not found.";
+            }
+
+            // Set user details
+            user.setUserId(userId);
+            user.setLoggedIn(true);
+            if (usernameOrEmail.contains("@")) {
+                String username = databaseService.getUsernameForEmail(usernameOrEmail).get();
+                user.setUsername(username);
+                user.setEmail(usernameOrEmail);
             } else {
-                // Show error message from the result string
+                String email = databaseService.getEmailForUsername(usernameOrEmail).get();
+                user.setUsername(usernameOrEmail);
+                user.setEmail(email);
+            }
+
+            // Load user filters, alerts, archives, and settings
+            UserFilters filters = databaseService.getUserFilters(user.getUserId()).get();
+            user.setUserFilters(filters != null ? filters : new UserFilters("ALL", "ALL", Arrays.asList("ALL"), true, true));
+
+            UserAlerts alerts = databaseService.getUserAlerts(user.getUserId()).get();
+            user.setUserAlerts(alerts != null ? alerts : new UserAlerts());
+
+            List<CVE> archivedCVEs = databaseService.getArchivedCVEs(user.getUserId()).get();
+            user.setUserArchives(new UserArchives(archivedCVEs));
+
+            UserSettings settings = databaseService.getUserSettings(user.getUserId()).get();
+            user.setUserSettings(settings != null ? settings : new UserSettings(true, true, new Date(), true, true));
+
+            return null; // Indicate success
+        };
+
+        // Define the success callback
+        Consumer<String> onSuccess = result -> {
+            loadingDialog.dispose();
+            if (result == null) { // Success
+                // Save session asynchronously
+                databaseService.saveUserSession(user).thenRun(() -> {
+                    SwingUtilities.invokeLater(() -> {
+                        // Dispose the old mainFrame if it exists
+                        if (mainFrame != null) {
+                            mainFrame.dispose();
+                        }
+                        // Initialize MainFrame with the authenticated user
+                        mainFrame = new MainFrame(this, user);
+                        mainFrame.setButtonsStatus(true);
+
+                        // Start fetching CVE data
+                        startCVEFetching(true);
+                    });
+                }).exceptionally(ex -> {
+                    ex.printStackTrace();
+                    SwingUtilities.invokeLater(() -> {
+                        if (mainFrame != null) {
+                            mainFrame.showMessage("Failed to save session.", "Login Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+                    return null;
+                });
+            } else { // An error message was returned
                 mainFrame.showMessage(result, "Login Failed", JOptionPane.ERROR_MESSAGE);
             }
-        }, ex -> {
+        };
+
+        // Define the failure callback
+        Consumer<Exception> onFailure = ex -> {
             loadingDialog.dispose();
-            // Handle any unexpected errors
-            mainFrame.showMessage("An unexpected error occurred.", "Login Failed", JOptionPane.ERROR_MESSAGE);
-        });
-    
+            ex.printStackTrace();
+            mainFrame.showMessage("An unexpected error occurred during login.", "Login Error", JOptionPane.ERROR_MESSAGE);
+        };
+
+        // Execute the background task
+        executeTask(loginTask, onSuccess, onFailure);
         loadingDialog.setVisible(true);
-    }       
-
-    /**
-     * Loads user details such as filters, alerts, and settings.
-     *
-     * @param usernameOrEmail The username or email.
-     * @return A CompletableFuture representing the asynchronous computation.
-     */
-    private CompletableFuture<Void> loadUserDetails(String usernameOrEmail) {
-        return databaseService.getUserId(usernameOrEmail).thenCompose(userId -> {
-            user.setUserId(userId);
-
-            CompletableFuture<UserFilters> filtersFuture = databaseService.getUserFilters(userId);
-            CompletableFuture<UserAlerts> alertsFuture = databaseService.getUserAlerts(userId);
-            CompletableFuture<UserSettings> settingsFuture = databaseService.getUserSettings(userId);
-
-            return CompletableFuture.allOf(filtersFuture, alertsFuture, settingsFuture).thenAccept(v -> {
-                user.setUserFilters(
-                        filtersFuture.join() != null
-                                ? filtersFuture.join()
-                                : new UserFilters("ALL", "ALL", Arrays.asList("ALL"), true, true));
-                user.setUserAlerts(
-                        alertsFuture.join() != null
-                                ? alertsFuture.join()
-                                : new UserAlerts("defaultAlert"));
-                user.setUserSettings(
-                        settingsFuture.join() != null
-                                ? settingsFuture.join()
-                                : new UserSettings(true, new Date(), true, true));
-
-                // Save session
-                SessionManager.saveUserSession(user);
-
-                SwingUtilities.invokeLater(() -> {
-                    // Update the UI and proceed to the main application window
-                    mainFrame.dispose();
-                    mainFrame = new MainFrame(this, user);
-                    mainFrame.setButtonsStatus(true);
-
-                    // Start fetching data
-                    startCVEFetching(true);
-                });
-            });
-        });
     }
 
     /**
      * Logs out the user and resets the session.
      */
     public void logout() {
-        user.setLoggedIn(false);
-        stopCVEFetching();
-        SessionManager.clearSession();  // Clear session data
-        SwingUtilities.invokeLater(() -> {
-            mainFrame.dispose();
-            startApp();  // Will restart the app logically as in guest mode
-        });
+        if (user != null && user.isLoggedIn()) {
+            // Clear session from the database
+            SessionManager.clearSession(user.getUserId()).thenRun(() -> {
+                user.setLoggedIn(false);
+                user.setUserId(0);
+                user.setUsername("Guest");
+                user.setEmail(null);
+                user.setUserFilters(new UserFilters("ALL", "ALL", Arrays.asList("ALL"), true, true));
+                user.setUserAlerts(new UserAlerts());
+                user.setUserArchives(new UserArchives(null));
+                user.setUserSettings(new UserSettings(true, true, new Date(), true, true));
+
+                stopCVEFetching();
+                SwingUtilities.invokeLater(() -> {
+                    mainFrame.dispose();
+                    createGuestUser();  // Reset to guest mode
+                });
+            }).exceptionally(ex -> {
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> mainFrame.showMessage("Failed to logout.", "Logout Error", JOptionPane.ERROR_MESSAGE));
+                return null;
+            });
+        }
     }    
 
     /**
@@ -280,11 +343,11 @@ public class Main {
             if (Thread.currentThread().isInterrupted()) return;
 
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-    
+
             if (showProgress) {
                 SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(0));
             }
-    
+
             if (!checkService.isInternetAvailable() || !checkService.isSystemDateCorrect()) {
                 SwingUtilities.invokeLater(() -> {
                     mainFrame.showMessage("Connection lost or system date incorrect. The fetcher will stop.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -293,27 +356,27 @@ public class Main {
             }
 
             if (Thread.currentThread().isInterrupted()) return;
-    
+
             // Calculate the start of the current day (midnight)
             Calendar calendar = Calendar.getInstance();
             calendar.set(Calendar.HOUR_OF_DAY, 0);
             calendar.set(Calendar.MINUTE, 0);
             calendar.set(Calendar.SECOND, 0);
             calendar.set(Calendar.MILLISECOND, 0);
-    
+
             String lastModStartDate = dateFormat.format(calendar.getTime());  // Start of the current day
             lastModEndDate = dateFormat.format(new Date());  // Current time
-    
+
             // Reset CVEs if needed
             Boolean resetResult = databaseService.resetCVEs().join();
             if (resetResult) {
                 SwingUtilities.invokeLater(() -> mainFrame.resetCVETable());
             }
-    
+
             if (showProgress) {
                 SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(25));
             }
-    
+
             if (Thread.currentThread().isInterrupted()) return;
 
             try {
@@ -323,18 +386,22 @@ public class Main {
                     if (showProgress) {
                         SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(50));
                     }
-    
+
                     if (Thread.currentThread().isInterrupted()) return;
 
                     // Save filtered CVEs in DB
                     databaseService.saveCVEData(cveList).join();
-    
+
+                    if (user.isLoggedIn()) {
+                        checkAndSendNotifications();
+                    }
+
                     if (showProgress) {
                         SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(100));
                     }
-    
+
                     TimeUnit.SECONDS.sleep(2); // Brief pause before updating UI
-    
+
                     if (Thread.currentThread().isInterrupted()) return;
                     
                     // Reload the CVE data in the GUI
@@ -349,12 +416,13 @@ public class Main {
                     TimeUnit.SECONDS.sleep(2);
                 }
             } catch (IOException | ParseException | InterruptedException e) {
-                // e.printStackTrace();
+                // Handle exceptions appropriately
+                e.printStackTrace();
             }
-    
+
             // Set isFirstFetch to false after the first fetch
             if (isFirstFetch) isFirstFetch = false;
-    
+
         }, fetcherExecutor).thenRun(() -> {
             if (showProgress) {
                 SwingUtilities.invokeLater(() -> {
@@ -379,6 +447,7 @@ public class Main {
                 if (mainFrame != null && mainFrame.isDisplayable()) {
                     mainFrame.hideProgressBar();
                     mainFrame.setButtonsStatus(true);
+                    // Optionally show an error message
                     // mainFrame.showMessage("An error occurred while fetching CVE data.", "Fetch Error", JOptionPane.ERROR_MESSAGE);
                 }
             });
@@ -427,7 +496,7 @@ public class Main {
                     user.getUserFilters().isIncludeResolved(),
                     user.getUserFilters().isIncludeRejected()
             );
-    
+
             // Update the CVE table in the UI with the filtered CVEs
             SwingUtilities.invokeLater(() -> {
                 if (mainFrame != null && mainFrame.isDisplayable() && user.isLoggedIn()) {
@@ -454,10 +523,11 @@ public class Main {
         LoadingDialog loadingDialog = new LoadingDialog(loginFrame, null);
         loadingDialog.setMessage("Searching . . .");
 
-        databaseService.searchCVEData(query).thenAccept(cveList -> {
+        CompletableFuture<List<CVE>> searchFuture = databaseService.searchCVEData(query);
+        searchFuture.thenAccept(cveList -> {
             if (cveList.isEmpty()) {
                 // If no results in the database, fetch from the API
-                List<CVE> apiCveList = new CVEFetcher().SfetchCVEData(query);
+                List<CVE> apiCveList = cveFetcher.SfetchCVEData(query);
 
                 if (apiCveList == null) {
                     loadingDialog.dispose();
@@ -511,6 +581,181 @@ public class Main {
     }
 
     /**
+     * Checks for CVE alerts and sends notifications accordingly.
+     */
+    private void checkAndSendNotifications() {
+        UserAlerts userAlerts = user.getUserAlerts();
+        if (userAlerts == null || userAlerts.getAlerts().isEmpty()) {
+            return; // No alerts to process
+        }
+
+        AtomicBoolean alertsUpdated = new AtomicBoolean(false); // Thread-safe flag
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+
+        for (AlertItem alert : userAlerts.getAlerts()) {
+            CompletableFuture<Void> future = databaseService.getCVEData().thenAccept(allCVEs -> {
+                // Filter CVEs based on alert criteria
+                List<CVE> matchingCVEs = new Filters().filterCVEsForAlert(allCVEs, alert);
+
+                // Further filter out CVEs that have already been alerted for this alert
+                List<CVE> newMatchingCVEs = matchingCVEs.stream()
+                        .filter(cve -> !alert.getAlertedCveIds().contains(cve.getCveId()))
+                        .collect(Collectors.toList());
+
+                if (!newMatchingCVEs.isEmpty()) {
+                    // Delegate notification handling to NotificationService
+                    notificationService.sendAlert(user, alert, newMatchingCVEs);
+
+                    // Add the CVE IDs to alertedCveIds to prevent duplicate alerts
+                    alert.getAlertedCveIds().addAll(
+                            newMatchingCVEs.stream()
+                                    .map(CVE::getCveId)
+                                    .collect(Collectors.toList())
+                    );
+                    alertsUpdated.set(true); // Update the flag
+
+                    // Save notifications to the database
+                    saveNotificationsToDatabase(user.getUserId(), newMatchingCVEs);
+                }
+            }).exceptionally(ex -> {
+                ex.printStackTrace();
+                return null;
+            });
+
+            futures.add(future); // Collect the future
+        }
+
+        // Wait for all asynchronous tasks to complete
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .thenRun(() -> {
+                    if (alertsUpdated.get()) {
+                        // Save the updated alerts to the database
+                        databaseService.updateUserAlerts(user.getUserId(), user.getUserAlerts()).join();
+                        // Update the session
+                        SessionManager.saveUserSession(user).join();
+                    }
+                })
+                .exceptionally(ex -> {
+                    ex.printStackTrace();
+                    return null;
+                });
+    }
+    
+    /**
+     * Handles archiving a CVE.
+     *
+     * @param userId The ID of the user.
+     * @param cveId  The ID of the CVE to archive.
+     * @param row    The row index in the table.
+     */
+    public void archiveCVE(int userId, String cveId, int row) {
+        // Check current archive count
+        databaseService.countArchivedCVEs(userId).thenAccept(count -> {
+            if (count >= MAX_ARCHIVED_CVES) {
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(
+                            mainFrame,
+                            "You have reached the maximum archive limit (" + MAX_ARCHIVED_CVES + "). Please unarchive some CVEs before archiving new ones.",
+                            "Archive Limit Reached",
+                            JOptionPane.WARNING_MESSAGE
+                    );
+                });
+                return;
+            }
+
+            // Proceed with archiving
+            archiveCVEInternal(userId, cveId, row);
+        }).exceptionally(ex -> {
+            ex.printStackTrace();
+            SwingUtilities.invokeLater(() -> {
+                JOptionPane.showMessageDialog(
+                        mainFrame,
+                        "An error occurred while checking archive limit.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            });
+            return null;
+        });
+    }
+
+    /**
+     * Internal method to perform archiving after limit check.
+     *
+     * @param userId The ID of the user.
+     * @param cveId  The ID of the CVE to archive.
+     * @param row    The row index in the table.
+     */
+    private void archiveCVEInternal(int userId, String cveId, int row) {
+        // Show confirmation dialog
+        int confirmed = JOptionPane.showConfirmDialog(
+                mainFrame,
+                "Are you sure you want to archive CVE: " + cveId + "?",
+                "Archive Confirmation",
+                JOptionPane.YES_NO_OPTION
+        );
+
+        if (confirmed == JOptionPane.YES_OPTION) {
+            // Archive the CVE using the controller's DatabaseService
+            databaseService.archiveCVE(userId, cveId).thenAccept(success -> {
+                if (success) {
+                    // Retrieve the archived CVE details from the database
+                    databaseService.getArchivedCVEById(userId, cveId).thenApply(archivedCve -> {
+                        if (archivedCve != null) {
+                            // Update the session User object
+                            user.addArchivedCVE(archivedCve);
+                        }
+                        return success;
+                    });                
+                } else {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(
+                                mainFrame,
+                                "CVE " + cveId + " is already archived.",
+                                "Archive Failed",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                    });
+                }
+            }).exceptionally(ex -> {
+                ex.printStackTrace();
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(
+                            mainFrame,
+                            "An error occurred while archiving CVE " + cveId + ".",
+                            "Archive Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                });
+                return null;
+            });
+        }
+    }
+
+    /**
+     * Saves notifications to the database asynchronously.
+     *
+     * @param userId     The user ID.
+     * @param cveList The list of CVEs that triggered the notifications.
+     */
+    private void saveNotificationsToDatabase(int userId, List<CVE> cveList) {
+        databaseService.saveNotifications(userId, cveList);
+    }
+
+    /**
+     * Shows a system alert dialog.
+     *
+     * @param alert         The alert item.
+     * @param matchingCVEs  The list of CVEs matching the alert.
+     */
+    public void showDialogAlert(AlertItem alert, List<CVE> matchingCVEs) {
+        SwingUtilities.invokeLater(() -> {
+            AlertNotificationDialog alertDialog = new AlertNotificationDialog(mainFrame, alert, matchingCVEs, notificationService, user);
+            alertDialog.setVisible(true);
+        });
+    }
+
+    /**
      * Returns the DatabaseService instance.
      *
      * @return The DatabaseService instance.
@@ -548,17 +793,41 @@ public class Main {
     }
 
     /**
-     * Shows the alerts frame (Placeholder).
+     * Shows the alerts frame.
      */
     public void showAlertsFrame() {
-        SwingUtilities.invokeLater(() -> mainFrame.showMessage("Alerts functionality will go here.", "Alerts", JOptionPane.INFORMATION_MESSAGE));
+        SwingUtilities.invokeLater(() -> {
+            if (alertsFrame == null || !alertsFrame.isVisible()) { // Check if the frame is already open
+                alertsFrame = new AlertsFrame(this, user);
+                alertsFrame.setVisible(true);
+            } else {
+                alertsFrame.requestFocus(); // Bring the already open frame to the front
+            }
+        });
     }
 
     /**
-     * Shows the archives frame (Placeholder).
+     * Shows the archives frame.
      */
     public void showArchivesFrame() {
-        SwingUtilities.invokeLater(() -> mainFrame.showMessage("Archives functionality will go here.", "Archives", JOptionPane.INFORMATION_MESSAGE));
+        if (!user.isLoggedIn()) {
+            JOptionPane.showMessageDialog(
+                    mainFrame,
+                    "Please log in to access archives.",
+                    "Access Denied",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            if (archivesFrame == null || !archivesFrame.isVisible()) { // Check if the frame is already open
+                archivesFrame = new ArchivesFrame(this, user);
+                archivesFrame.setVisible(true);
+            } else {
+                archivesFrame.requestFocus(); // Bring the already open frame to the front
+            }
+        });
     }
 
     /**
@@ -567,11 +836,12 @@ public class Main {
     public void showSettingsFrame() {
         SwingUtilities.invokeLater(() -> mainFrame.showMessage("Settings functionality will go here.", "Settings", JOptionPane.INFORMATION_MESSAGE));
     }
-
+    
     /**
      * Shuts down the application, releasing resources.
+     * @throws IOException 
      */
-    public void shutdown() {
+    public void shutdown() throws IOException {
         if (scheduler != null) {
             scheduler.shutdownNow();
         }
@@ -584,24 +854,20 @@ public class Main {
         if (checkService != null) {
             checkService.shutdown();
         }
+        if (notificationService != null) {
+            notificationService.stopAlertSoundLoop();
+        }
     }
 
-    // <Geek/>
+    /**
+     * Executes a background task with success and failure callbacks.
+     *
+     * @param task      The background task.
+     * @param onSuccess The success callback.
+     * @param onFailure The failure callback.
+     * @param <T>       The type of the result.
+     */
     public <T> void executeTask(Callable<T> task, Consumer<T> onSuccess, Consumer<Exception> onFailure) {
-        // Note . . 
-        // The TaskWorker class is designed for simple background tasks such as checking 
-        // internet connection, system date, and other lightweight tasks.
-        // It is NOT intended for complex threading or operations such as database fetching 
-        // or CVE data retrieval. Those will continue to use dedicated executor services 
-        // like fetcherExecutor or more complex threading mechanisms as appropriate.
-        //
-        // This class has been integrated into the controller to provide easy access 
-        // and reuse across different parts of the application, ensuring that common, 
-        // lightweight background tasks can be handled efficiently without duplicating code.
-        //
-        // Future Consideration: We may explore merging the LoadingDialog functionality 
-        // with TaskWorker for better encapsulation and management of background tasks 
-        // that require a loading indicator, streamlining the process further.
         TaskWorker<T, Void> worker = new TaskWorker<>(task, onSuccess, onFailure);
         worker.execute();
     }

@@ -51,6 +51,7 @@ public class MainFrame extends JFrame {
     private JTextField searchField;
     private JLabel searchButton;
 
+    // Logic
     protected Main controller;
     private User user;
 
@@ -144,7 +145,7 @@ public class MainFrame extends JFrame {
             logoutButton.setFont(new Font("Arial", Font.PLAIN, 16));
             logoutButton.setPreferredSize(new Dimension(100, 40));
             logoutButton.setFocusable(false);
-            logoutButton.addActionListener(e -> {
+            logoutButton.addActionListener(_ -> {
                 int confirmed = JOptionPane.showConfirmDialog(
                         this, 
                         "Are you sure you want to logout ?", 
@@ -165,14 +166,14 @@ public class MainFrame extends JFrame {
             loginButton.setFont(new Font("Arial", Font.PLAIN, 16));
             loginButton.setPreferredSize(new Dimension(100, 40));
             loginButton.setFocusable(false);
-            loginButton.addActionListener(e -> controller.showLoginFrame());
+            loginButton.addActionListener(_ -> controller.showLoginFrame());
 
             // Signup Button
             signupButton = new JButton("Signup");
             signupButton.setFont(new Font("Arial", Font.PLAIN, 16));
             signupButton.setPreferredSize(new Dimension(100, 40));
             signupButton.setFocusable(false);
-            signupButton.addActionListener(e -> controller.handleSignup());
+            signupButton.addActionListener(_ -> controller.handleSignup());
 
             addHoverEffect(loginButton);
             addHoverEffect(signupButton);
@@ -313,7 +314,7 @@ public class MainFrame extends JFrame {
         JMenuItem copyCveIdMenuItem = new JMenuItem("Copy CVE ID");
 
         // Add action listeners for each menu item
-        viewDetailsMenuItem.addActionListener(e -> {
+        viewDetailsMenuItem.addActionListener(_ -> {
             int row = cveTable.getSelectedRow();
             if (row != -1) {
                 String cveId = cveTableModel.getValueAt(row, 0).toString();
@@ -322,17 +323,16 @@ public class MainFrame extends JFrame {
             }
         });
 
-        archiveMenuItem.addActionListener(e -> {
+        archiveMenuItem.addActionListener(_ -> {
             int row = cveTable.getSelectedRow();
             if (row != -1) {
                 String cveId = cveTableModel.getValueAt(row, 0).toString();
-                // Add logic for archiving the CVE (Currently not implemented)
-                JOptionPane.showMessageDialog(this, "Archiving feature will be implemented for: " + cveId, "Archive", JOptionPane.INFORMATION_MESSAGE);
-                cveTable.clearSelection();
+                int userId = controller.user.getUserId();
+                controller.archiveCVE(userId, cveId, row);
             }
         });
 
-        copyCveIdMenuItem.addActionListener(e -> {
+        copyCveIdMenuItem.addActionListener(_ -> {
             int row = cveTable.getSelectedRow();
             if (row != -1) {
                 String cveId = cveTableModel.getValueAt(row, 0).toString();
@@ -368,6 +368,24 @@ public class MainFrame extends JFrame {
                     cveTable.setRowSelectionInterval(row, row); // Select the row under right-click
                 } else {
                     cveTable.clearSelection(); // Clear selection if right-click is outside the rows
+                }
+
+                // Enable or disable the Archive option based on archive limit
+                if (controller.user.isLoggedIn()) {
+                    controller.getDatabaseService().countArchivedCVEs(controller.user.getUserId()).thenAccept(count -> {
+                        SwingUtilities.invokeLater(() -> {
+                            if (count >= controller.MAX_ARCHIVED_CVES) {
+                                archiveMenuItem.setEnabled(false);
+                                archiveMenuItem.setToolTipText("Archive limit reached (" + controller.MAX_ARCHIVED_CVES + ")");
+                            } else {
+                                archiveMenuItem.setEnabled(true);
+                                archiveMenuItem.setToolTipText(null);
+                            }
+                        });
+                    });
+                } else {
+                    archiveMenuItem.setEnabled(false);
+                    archiveMenuItem.setToolTipText("Please log in to archive CVEs.");
                 }
 
                 // Show the popup menu at the location of the mouse event
@@ -438,7 +456,7 @@ public class MainFrame extends JFrame {
         reloadButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         reloadButton.setMaximumSize(new Dimension(250, 40));
         reloadButton.setFocusable(false);
-        reloadButton.addActionListener(e -> controller.startCVEFetching(true));
+        reloadButton.addActionListener(_ -> controller.startCVEFetching(true));
         
         // Filters Button
         filterButton = new JButton("Filters");
@@ -447,7 +465,7 @@ public class MainFrame extends JFrame {
         filterButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         filterButton.setMaximumSize(new Dimension(250, 40));
         filterButton.setFocusable(false);
-        filterButton.addActionListener(e -> controller.showFilterFrame());  // Define the filter logic in this method
+        filterButton.addActionListener(_ -> controller.showFilterFrame());  // Define the filter logic in this method
 
         // Alerts Button
         alertsButton = new JButton("Alerts");
@@ -456,7 +474,7 @@ public class MainFrame extends JFrame {
         alertsButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         alertsButton.setMaximumSize(new Dimension(250, 40));
         alertsButton.setFocusable(false);
-        alertsButton.addActionListener(e -> controller.showAlertsFrame());  // Define the alerts logic in this method
+        alertsButton.addActionListener(_ -> controller.showAlertsFrame());  // Define the alerts logic in this method
 
         // Archive Button
         archivesButton = new JButton("Archives");
@@ -465,7 +483,7 @@ public class MainFrame extends JFrame {
         archivesButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         archivesButton.setMaximumSize(new Dimension(250, 40));
         archivesButton.setFocusable(false);
-        archivesButton.addActionListener(e -> controller.showArchivesFrame());  // Define the alerts logic in this method
+        archivesButton.addActionListener(_ -> controller.showArchivesFrame());  // Define the alerts logic in this method
         
         // Settings Button
         settingsButton = new JButton("Settings");
@@ -474,7 +492,7 @@ public class MainFrame extends JFrame {
         settingsButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         settingsButton.setMaximumSize(new Dimension(250, 40));
         settingsButton.setFocusable(false);
-        settingsButton.addActionListener(e -> controller.showSettingsFrame());  // Define the settings logic in this method
+        settingsButton.addActionListener(_ -> controller.showSettingsFrame());  // Define the settings logic in this method
 
         // About Button
         aboutButton = new JButton("About");
@@ -483,7 +501,7 @@ public class MainFrame extends JFrame {
         aboutButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         aboutButton.setMaximumSize(new Dimension(250, 40));
         aboutButton.setFocusable(false);
-        aboutButton.addActionListener(e -> showAboutDialog());
+        aboutButton.addActionListener(_ -> showAboutDialog());
 
         // Add the hover effect to all buttons
         addHoverEffect(reloadButton);
@@ -552,7 +570,7 @@ public class MainFrame extends JFrame {
                 searchButton.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));  // Revert cursor when not hovering
             }
         });
-        searchField.addActionListener(e -> handleSearch());
+        searchField.addActionListener(_ -> handleSearch());
     
         // Add components to South Panel
         southPanel.add(searchField);

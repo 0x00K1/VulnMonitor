@@ -150,10 +150,10 @@ public class FiltersFrame extends JFrame {
         JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 
         applyButton = new JButton("Apply");
-        applyButton.addActionListener(e -> applyFilters());
+        applyButton.addActionListener(_ -> applyFilters());
 
         cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(e -> dispose());
+        cancelButton.addActionListener(_ -> dispose());
 
         buttonsPanel.add(applyButton);
         buttonsPanel.add(cancelButton);
@@ -173,62 +173,77 @@ public class FiltersFrame extends JFrame {
         loadingDialog.setMessage("Applying filters . . .");
     
         controller.executeTask(
-            // The background task: checking internet and system date availability
+            // Background task
             () -> {
+                // Check internet and system date
                 boolean isInternetAvailable = controller.checkService.isInternetAvailable();
                 boolean isSystemDateCorrect = controller.checkService.isSystemDateCorrect();
-                return isInternetAvailable && isSystemDateCorrect;
+    
+                if (!isInternetAvailable || !isSystemDateCorrect) {
+                    return "Connection cannot be established due to internet or system date issues.";
+                }
+    
+                String selectedOS = osComboBox.getSelectedItem().toString();
+                String selectedSeverity = severityComboBox.getSelectedItem().toString();
+                List<String> selectedProducts = productList.getSelectedValuesList().stream()
+                        .collect(Collectors.toList());
+                boolean includeResolved = includeResolvedCheckBox.isSelected();
+                boolean includeRejected = includeRejectedCheckBox.isSelected();
+    
+                // Validate filter selections
+                if (selectedOS == null || selectedOS.isEmpty()) {
+                    return "Please select an operating system.";
+                }
+                if (selectedSeverity == null || selectedSeverity.isEmpty()) {
+                    return "Please select a severity level.";
+                }
+                if (selectedProducts == null || selectedProducts.isEmpty()) {
+                    return "Please select at least one product.";
+                }
+    
+                UserFilters updatedFilters = new UserFilters(
+                        selectedOS,
+                        selectedSeverity,
+                        selectedProducts,
+                        includeResolved,
+                        includeRejected
+                );
+    
+                // Update the filters in the database
+                controller.getDatabaseService().updateUserFilters(user.getUserId(), updatedFilters).join();
+    
+                // Update the user's filters
+                user.setUserFilters(updatedFilters);
+    
+                // Update the session with the new filters
+                SessionManager.saveUserSession(user);
+    
+                // Reload CVE data
+                controller.reloadCVEData();
+    
+                return null; // Indicate success
             },
-            // Success callback: Apply filters if checks pass
-            checksPassed -> {
+            // Success callback
+            result -> {
                 loadingDialog.dispose();
-                if (checksPassed) {
-                    String selectedOS = osComboBox.getSelectedItem().toString();
-                    String selectedSeverity = severityComboBox.getSelectedItem().toString();
-                    List<String> selectedProducts = productList.getSelectedValuesList().stream()
-                            .collect(Collectors.toList());
-                    boolean includeResolved = includeResolvedCheckBox.isSelected();
-                    boolean includeRejected = includeRejectedCheckBox.isSelected();
     
-                    UserFilters updatedFilters = new UserFilters(
-                            selectedOS,
-                            selectedSeverity,
-                            selectedProducts,
-                            includeResolved,
-                            includeRejected
-                    );
-    
-                    // Update the filters in the database
-                    controller.getDatabaseService().updateUserFilters(user.getUserId(), updatedFilters);
-    
-                    // Update the user's filters
-                    user.setUserFilters(updatedFilters);
-    
-                    // Update the session with the new filters
-                    SessionManager.saveUserSession(user);
-    
-                    // Reset the CVE table
-                    controller.reloadCVEData();
-    
+                if (result == null) {
                     // Close the filters frame
                     dispose();
                 } else {
-                    controller.mainFrame.showMessage(
-                            "Connection cannot be established due to internet or system date issues.",
-                            "ERROR",
-                            JOptionPane.ERROR_MESSAGE
-                    );
+                    // Show error message
+                    JOptionPane.showMessageDialog(this, result, "Error", JOptionPane.ERROR_MESSAGE);
                 }
             },
-            // Failure callback: Show an error message if any exception occurs
+            // Failure callback
             error -> {
                 loadingDialog.dispose();
                 error.printStackTrace();
-                controller.mainFrame.showMessage("An error occurred.", "ERROR", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "An error occurred while applying filters.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         );
     
         // Show the loading dialog while the task is being executed
         loadingDialog.setVisible(true);
-    }    
+    }        
 }

@@ -98,7 +98,7 @@ public class LoginFrame extends JFrame {
         loginButton.setFocusPainted(false);
         loginButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         loginButton.setMaximumSize(new Dimension(90, 40));  // Set max size for uniform buttons
-        loginButton.addActionListener(e -> handleLogin());
+        loginButton.addActionListener(_ -> handleLogin());
         mainPanel.add(loginButton);
 
         // Add main panel to frame

@@ -1,93 +1,65 @@
 package com.vulnmonitor.utils;
 
+import com.vulnmonitor.model.AlertItem;
 import com.vulnmonitor.model.CVE;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Filters {
 
     // List of supported operating systems
-    private static final List<String> SUPPORTED_OS = Arrays.asList(
-            "Windows", "Linux", "macOS", "Ubuntu", "Debian", "RedHat", "CentOS",
-            "Android", "iOS", "FreeBSD", "Solaris"
-    );
+    // private static final List<String> SUPPORTED_OS = Arrays.asList(
+    //         "Windows", "Linux", "macOS", "Ubuntu", "Debian", "RedHat", "CentOS",
+    //         "Android", "iOS", "FreeBSD", "Solaris"
+    // );
 
     // Method to filter by operating system
     public List<CVE> filterByOS(List<CVE> cves, String selectedOS) {
-        List<CVE> filteredCVE = new ArrayList<>();
-
-        // Normalize the selectedOS without reassigning it
-        final String normalizedSelectedOS = selectedOS.toLowerCase();
-
-        // If the selectedOS is "all", return the full list (no filter)
-        if ("all".equals(normalizedSelectedOS)) {
+        if (selectedOS == null || "ALL".equalsIgnoreCase(selectedOS)) {
             return cves;
         }
-
-        // Check if selectedOS is in SUPPORTED_OS (case-insensitive)
-        boolean isSupportedOS = SUPPORTED_OS.stream()
-                .anyMatch(os -> os.equalsIgnoreCase(normalizedSelectedOS));
-
-        if (!isSupportedOS) {
-            System.out.println("Warning: Unsupported OS selected. Returning full CVE list.");
-            return cves;  // or return new ArrayList<>(); to return an empty list
-        }
-
-        // Apply filtering by OS
-        for (CVE cve : cves) {
-            if ((cve.getPlatform() != null && cve.getPlatform().toLowerCase().contains(normalizedSelectedOS)) ||
-                (cve.getAffectedProduct() != null && cve.getAffectedProduct().toLowerCase().contains(normalizedSelectedOS))) {
-                filteredCVE.add(cve);
-            }
-        }
-
-        return filteredCVE;
+        String normalizedSelectedOS = selectedOS.toLowerCase();
+        return cves.stream()
+                .filter(cve -> {
+                    String platform = cve.getPlatform();
+                    String affectedProduct = cve.getAffectedProduct();
+                    return (platform != null && platform.toLowerCase().contains(normalizedSelectedOS)) ||
+                        (affectedProduct != null && affectedProduct.toLowerCase().contains(normalizedSelectedOS));
+                })
+                .collect(Collectors.toList());
     }
 
     // Method to filter by severity
     public List<CVE> filterBySeverity(List<CVE> cves, String selectedSeverity) {
-        List<CVE> filteredCVE = new ArrayList<>();
-
-        // If the selectedSeverity is "All", return the full list (no filter)
-        if ("all".equalsIgnoreCase(selectedSeverity)) {
+        if (selectedSeverity == null || "ALL".equalsIgnoreCase(selectedSeverity)) {
             return cves;
         }
-
-        // Apply filtering by severity
-        for (CVE cve : cves) {
-            if (cve.getSeverity() != null && cve.getSeverity().equalsIgnoreCase(selectedSeverity)) {
-                filteredCVE.add(cve);
-            }
-        }
-
-        return filteredCVE;
+        String normalizedSeverity = selectedSeverity.toLowerCase();
+        return cves.stream()
+                .filter(cve -> cve.getSeverity() != null &&
+                        cve.getSeverity().toLowerCase().equals(normalizedSeverity))
+                .collect(Collectors.toList());
     }
-    
-    // Method to filter by affected products
+
+    // Method to filter by product
     public List<CVE> filterByProduct(List<CVE> cves, List<String> selectedProducts) {
-        List<CVE> filteredCVE = new ArrayList<>();
-
-        // If the selectedProducts is empty or contains "All", return the full list (no filter)
         if (selectedProducts == null || selectedProducts.isEmpty() ||
-            selectedProducts.stream().anyMatch(product -> product.equalsIgnoreCase("All"))) {
+            selectedProducts.stream().anyMatch(product -> "ALL".equalsIgnoreCase(product))) {
             return cves;
         }
-
-        // Apply filtering by products
-        for (CVE cve : cves) {
-            for (String product : selectedProducts) {
-                if (cve.getAffectedProduct() != null &&
-                    cve.getAffectedProduct().toLowerCase().contains(product.toLowerCase())) {
-                    filteredCVE.add(cve);
-                    break; // Break to avoid duplicate entries if multiple products match
-                }
-            }
-        }
-
-        return filteredCVE;
+        return cves.stream()
+                .filter(cve -> {
+                    String affectedProduct = cve.getAffectedProduct();
+                    return affectedProduct != null &&
+                        selectedProducts.stream().anyMatch(product ->
+                                affectedProduct.toLowerCase().contains(product.toLowerCase()));
+                })
+                .collect(Collectors.toList());
     }
+
 
     // Method to filter by resolved or unresolved status
     public List<CVE> filterByResolvedStatus(List<CVE> cves, boolean includeResolved) {
@@ -125,6 +97,21 @@ public class Filters {
         }
 
         return filteredCVE;
+    }
+
+    public List<CVE> filterCVEsForAlert(List<CVE> cveList, AlertItem alert) {
+        List<CVE> filteredCVEs = new ArrayList<>(cveList);
+
+        // Filter by platform (OS)
+        filteredCVEs = new Filters().filterByOS(filteredCVEs, alert.getPlatformAlert());
+
+        // Filter by product
+        filteredCVEs = new Filters().filterByProduct(filteredCVEs, Arrays.asList(alert.getProductAlert()));
+
+        // Filter by severity
+        filteredCVEs = new Filters().filterBySeverity(filteredCVEs, alert.getSeverity());
+
+        return filteredCVEs;
     }
 
     // Method to apply multiple filters
