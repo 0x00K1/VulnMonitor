@@ -27,16 +27,6 @@ public class AlertEditorDialog extends JDialog {
     private JButton saveButton;
     private JButton cancelButton;
 
-    // Available options
-    private static final String[] PLATFORM_OPTIONS = {
-        "ALL", "Windows", "Linux", "macOS", "Ubuntu", "Debian",
-        "RedHat", "CentOS", "Android", "iOS", "FreeBSD", "Solaris"
-    };
-    private static final String[] PRODUCT_OPTIONS = {"ALL", "WordPress", "Nvidia", "Apache"};
-    private static final String[] EMAIL_NOTIFICATION_OPTIONS = {"Enabled", "Disabled"};
-    private static final String[] DIALOG_ALERT_OPTIONS = {"Enabled", "Disabled"};
-    private static final String[] SEVERITY_OPTIONS = {"ALL", "Low", "Medium", "High", "Critical"};
-
     /**
      * Constructor for creating or editing an alert.
      *
@@ -50,9 +40,9 @@ public class AlertEditorDialog extends JDialog {
         this.alert = alert;
 
         setTitle(alert == null ? "Create Alert" : "Edit Alert");
-        setSize(400, 350);
+        setSize(500, 450);
         setLocationRelativeTo(parent);
-        setLayout(new GridLayout(7, 2, 10, 10));
+        setLayout(new GridBagLayout());
 
         initComponents();
     }
@@ -61,56 +51,140 @@ public class AlertEditorDialog extends JDialog {
      * Initializes UI components.
      */
     private void initComponents() {
-        // Name Field
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10,10,10,10);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        // Alert Name
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        add(new JLabel("Alert Name:"), gbc);
+
+        gbc.gridx = 1;
         nameField = new JTextField();
-        add(new JLabel("Alert Name:"));
-        add(nameField);
+        add(nameField, gbc);
 
-        // Initialize combo boxes
-        platformComboBox = new JComboBox<>(PLATFORM_OPTIONS);
-        productComboBox = new JComboBox<>(PRODUCT_OPTIONS);
-        emailNotificationComboBox = new JComboBox<>(EMAIL_NOTIFICATION_OPTIONS);
-        dialogAlertComboBox = new JComboBox<>(DIALOG_ALERT_OPTIONS);
-        severityComboBox = new JComboBox<>(SEVERITY_OPTIONS);
+        // Platform Alert (OS)
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        add(new JLabel("Platform Alert:"), gbc);
 
-        // Load alert data if editing
-        if (alert != null) {
-            nameField.setText(alert.getName());
-            platformComboBox.setSelectedItem(alert.getPlatformAlert());
-            productComboBox.setSelectedItem(alert.getProductAlert());
-            emailNotificationComboBox.setSelectedItem(alert.isEmailNotification() ? "Enabled" : "Disabled");
-            dialogAlertComboBox.setSelectedItem(alert.isDialogAlertEnabled() ? "Enabled" : "Disabled");
-            severityComboBox.setSelectedItem(alert.getSeverity());
-        } else {
-            // Default values
-            platformComboBox.setSelectedItem("ALL");
-            productComboBox.setSelectedItem("ALL");
-            emailNotificationComboBox.setSelectedItem("Disabled");
-            dialogAlertComboBox.setSelectedItem("Disabled");
-            severityComboBox.setSelectedItem("ALL");
-        }
+        gbc.gridx = 1;
+        platformComboBox = new JComboBox<>();
+        populatePlatformComboBox();
+        add(platformComboBox, gbc);
 
-        // Add components to the dialog
-        add(new JLabel("Platform Alert:"));
-        add(platformComboBox);
-        add(new JLabel("Product Alert:"));
-        add(productComboBox);
-        add(new JLabel("Severity:"));
-        add(severityComboBox);
-        add(new JLabel("Email Notifications:"));
-        add(emailNotificationComboBox);
-        add(new JLabel("Dialog Alert:"));
-        add(dialogAlertComboBox);
+        // Severity
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        add(new JLabel("Severity:"), gbc);
 
-        // Buttons for saving and canceling
+        gbc.gridx = 1;
+        severityComboBox = new JComboBox<>(new String[]{"ALL", "Low", "Medium", "High", "Critical"});
+        add(severityComboBox, gbc);
+        
+        // Product Alert
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        add(new JLabel("Product Alert:"), gbc);
+
+        gbc.gridx = 1;
+        productComboBox = new JComboBox<>();
+        populateProductComboBox();
+        add(productComboBox, gbc);
+
+        // Email Notifications
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        add(new JLabel("Email Notifications:"), gbc);
+
+        gbc.gridx = 1;
+        emailNotificationComboBox = new JComboBox<>(new String[]{"Enabled", "Disabled"});
+        add(emailNotificationComboBox, gbc);
+
+        // Dialog Alerts
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        add(new JLabel("Dialog Alerts:"), gbc);
+
+        gbc.gridx = 1;
+        dialogAlertComboBox = new JComboBox<>(new String[]{"Enabled", "Disabled"});
+        add(dialogAlertComboBox, gbc);
+
+        // Buttons
+        gbc.gridx = 0;
+        gbc.gridy = 6;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+
+        JPanel buttonsPanel = new JPanel(new FlowLayout());
+
         saveButton = new JButton("Save");
         saveButton.addActionListener(_ -> saveAlert());
 
         cancelButton = new JButton("Cancel");
         cancelButton.addActionListener(_ -> dispose());
 
-        add(saveButton);
-        add(cancelButton);
+        buttonsPanel.add(saveButton);
+        buttonsPanel.add(cancelButton);
+
+        add(buttonsPanel, gbc);
+
+        // Populate fields if editing an existing alert
+        if (alert != null) {
+            populateFields();
+        }
+    }
+
+    /**
+     * Populates the Platform (OS) combo box based on user alerts.
+     */
+    private void populatePlatformComboBox() {
+        UserAlerts userAlerts = user.getUserAlerts();
+        List<String> availableOs = userAlerts.getAvailableOs();
+
+        platformComboBox.removeAllItems();
+        for (String os : availableOs) {
+            platformComboBox.addItem(os);
+        }
+
+        // Set default selection
+        if (alert != null && alert.getPlatformAlert() != null) {
+            platformComboBox.setSelectedItem(alert.getPlatformAlert());
+        } else {
+            platformComboBox.setSelectedItem("ALL");
+        }
+    }
+
+    /**
+     * Populates the Product combo box based on user alerts.
+     */
+    private void populateProductComboBox() {
+        UserAlerts userAlerts = user.getUserAlerts();
+        List<String> availableProducts = userAlerts.getAvailableProducts();
+
+        productComboBox.removeAllItems();
+        for (String product : availableProducts) {
+            productComboBox.addItem(product);
+        }
+
+        // Set default selection
+        if (alert != null && alert.getProductAlert() != null) {
+            productComboBox.setSelectedItem(alert.getProductAlert());
+        } else {
+            productComboBox.setSelectedItem("ALL");
+        }
+    }
+
+    /**
+     * Populates the fields if editing an existing alert.
+     */
+    private void populateFields() {
+        nameField.setText(alert.getName());
+        // Platform and Product are already set in the combo boxes
+        severityComboBox.setSelectedItem(alert.getSeverity());
+        emailNotificationComboBox.setSelectedItem(alert.isEmailNotification() ? "Enabled" : "Disabled");
+        dialogAlertComboBox.setSelectedItem(alert.isDialogAlertEnabled() ? "Enabled" : "Disabled");
     }
 
     /**
@@ -125,14 +199,21 @@ public class AlertEditorDialog extends JDialog {
 
         String platform = (String) platformComboBox.getSelectedItem();
         String product = (String) productComboBox.getSelectedItem();
+        String severity = (String) severityComboBox.getSelectedItem();
         boolean emailNotification = "Enabled".equals(emailNotificationComboBox.getSelectedItem());
         boolean dialogAlertEnabled = "Enabled".equals(dialogAlertComboBox.getSelectedItem());
-        String severity = (String) severityComboBox.getSelectedItem();
 
-        // Create and display the loading dialog
+        // Validation: Ensure 'ALL' is not selected with specific criteria
+        if ("ALL".equals(platform) && !"ALL".equals(product)) {
+            int confirm = JOptionPane.showConfirmDialog(this, "You have selected 'ALL' for Platform but a specific Product. Proceed?", "Confirm Selection", JOptionPane.YES_NO_OPTION);
+            if (confirm != JOptionPane.YES_OPTION) return;
+        }
+
+        // Show a loading dialog
         LoadingDialog loadingDialog = new LoadingDialog(parentFrame, null);
         loadingDialog.setMessage("Saving alert . . .");
 
+        // Execute the save task asynchronously
         parentFrame.controller.executeTask(
             // Background task
             () -> {
@@ -158,7 +239,7 @@ public class AlertEditorDialog extends JDialog {
                     }
                 }
 
-                // Check for duplicate alert content
+                // Check for duplicate alert criteria
                 for (AlertItem existingAlert : existingAlerts) {
                     if ((alert == null || !existingAlert.getId().equals(alert.getId())) &&
                         existingAlert.getPlatformAlert().equalsIgnoreCase(platform) &&
@@ -180,9 +261,9 @@ public class AlertEditorDialog extends JDialog {
                     alert.setName(name);
                     alert.setPlatformAlert(platform);
                     alert.setProductAlert(product);
+                    alert.setSeverity(severity);
                     alert.setEmailNotification(emailNotification);
                     alert.setDialogAlertEnabled(dialogAlertEnabled);
-                    alert.setSeverity(severity);
 
                     // Update the alert in the list
                     for (int i = 0; i < existingAlerts.size(); i++) {
@@ -194,10 +275,10 @@ public class AlertEditorDialog extends JDialog {
                 }
 
                 // Update the alerts in the database
-                parentFrame.controller.getDatabaseService().updateUserAlerts(user.getUserId(), new UserAlerts(existingAlerts)).join();
+                parentFrame.controller.getDatabaseService().updateUserAlerts(user.getUserId(), new UserAlerts(existingAlerts, existingUserAlerts.getAvailableOs(), existingUserAlerts.getAvailableProducts())).join();
 
                 // Update the user's alerts in memory
-                user.setUserAlerts(new UserAlerts(existingAlerts));
+                user.setUserAlerts(new UserAlerts(existingAlerts, existingUserAlerts.getAvailableOs(), existingUserAlerts.getAvailableProducts()));
 
                 // Update the session
                 SessionManager.saveUserSession(user);

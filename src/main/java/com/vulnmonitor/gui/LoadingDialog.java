@@ -45,8 +45,14 @@ public class LoadingDialog extends JDialog {
                 if (backgroundImage != null) {
                     g2d.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
                 } else {
+                    String lookAndFeel = UIManager.getLookAndFeel().getClass().getSimpleName().toLowerCase();
+            
                     // Use default background color when there is no image
-                    g2d.setColor(new Color(45, 45, 48));  // Set background color to rgb(45, 45, 48)
+                    if (lookAndFeel.contains("dark")) {
+                        g2d.setColor(new Color(45, 45, 48));  // Set background color to rgb(45, 45, 48)
+                    } else {
+                        g2d.setColor(UIManager.getColor("Panel.background"));
+                    }            
                     g2d.fill(new RoundRectangle2D.Double(0, 0, getWidth(), getHeight(), 20, 20));
                 }
             }
@@ -57,7 +63,7 @@ public class LoadingDialog extends JDialog {
         // Message
         messageLabel = new JLabel("", SwingConstants.CENTER); // Default message is empty
         messageLabel.setFont(new Font("Roboto", Font.PLAIN, 16));
-        messageLabel.setForeground(Color.WHITE);
+        messageLabel.setForeground(UIManager.getColor("Label.foreground"));
         backgroundPanel.add(messageLabel, BorderLayout.CENTER);  // Add the message label to the center
 
         // Progress bar
@@ -121,13 +127,18 @@ public class LoadingDialog extends JDialog {
             // Colors for the animated effect
             Color color1;
             Color color2;
-
+ 
             if (isStartup) {
                 color1 = new Color(31, 136, 219);  // Startup colors
                 color2 = new Color(27, 39, 51);
             } else {
+                String lookAndFeel = UIManager.getLookAndFeel().getClass().getSimpleName().toLowerCase();
                 color1 = new Color(76, 135, 200);  // Default colors
-                color2 = new Color(45, 45, 48);
+                if (lookAndFeel.contains("dark")) {
+                    color2 = new Color(45, 45, 48);
+                } else {
+                    color2 = UIManager.getColor("Panel.background");
+                }             
             }
 
             // Create a gradient for the animated effect using the specified colors
@@ -160,8 +171,13 @@ public class LoadingDialog extends JDialog {
                 color1 = new Color(106, 189, 210);  // Startup colors
                 color2 = new Color(33, 42, 51);
             } else {
+                String lookAndFeel = UIManager.getLookAndFeel().getClass().getSimpleName().toLowerCase();
                 color1 = new Color(76, 135, 200);  // Default colors
-                color2 = new Color(45, 45, 48);
+                if (lookAndFeel.contains("dark")) {
+                    color2 = new Color(45, 45, 48);
+                } else {
+                    color2 = UIManager.getColor("Panel.background");
+                }              
             }
 
             // Use the progress to transition between colors

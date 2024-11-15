@@ -1,5 +1,7 @@
 package com.vulnmonitor;
 
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 import com.vulnmonitor.gui.*;
 import com.vulnmonitor.model.*;
 import com.vulnmonitor.services.*;
@@ -12,6 +14,7 @@ import javax.swing.text.DocumentFilter;
 import java.awt.Desktop;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.Window;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -37,11 +40,12 @@ public class Main {
     private FiltersFrame filtersFrame;
     private AlertsFrame alertsFrame;
     private ArchivesFrame archivesFrame;
+    private SettingsFrame settingsFrame;
     private LoadingDialog loadingDialog;
     private String lastModEndDate;
     private CompletableFuture<Void> currentFetchTask;
     public boolean isFirstFetch = true;
-    public final int MAX_ARCHIVED_CVES = 100;
+    private AtomicBoolean isFetcherRunning = new AtomicBoolean(false);
 
     /**
      * Entry point for the application. [Here We Go!]
@@ -104,6 +108,40 @@ public class Main {
     }    
 
     /**
+     * Applies the Look and Feel based on user settings.
+     */
+    public void applyLookAndFeel() {
+        if (SwingUtilities.isEventDispatchThread()) {
+            try {
+                if (user.getUserSettings().isDarkModeEnabled()) {
+                    UIManager.setLookAndFeel(new FlatDarkLaf());
+                } else {
+                    UIManager.setLookAndFeel(new FlatLightLaf());
+                }
+
+                // Update the UI for all open windows
+                for (Window window : Window.getWindows()) {
+                    SwingUtilities.updateComponentTreeUI(window);
+                }
+
+                if (mainFrame != null) {
+                    mainFrame.fUpdateComponent();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(
+                    mainFrame,
+                    "Failed to apply the selected theme.",
+                    "Theme Error",
+                    JOptionPane.ERROR_MESSAGE
+                );
+            }
+        } else {
+            SwingUtilities.invokeLater(this::applyLookAndFeel);
+        }
+    }
+
+    /**
      * Initializes the application.
      */
     public void startApp() { initializeUser(); }
@@ -118,6 +156,7 @@ public class Main {
                 SessionManager.loadUserSession(currentUserId).thenAccept(sessionUser -> {
                     if (sessionUser != null && sessionUser.isLoggedIn()) {
                         this.user = sessionUser;
+                        applyLookAndFeel();
                         SwingUtilities.invokeLater(() -> {
                             // Update the UI with the loaded session
                             mainFrame = new MainFrame(this, user);
@@ -160,16 +199,19 @@ public class Main {
         }
     }
 
-    /**
+     /**
      * Creates a guest user with default settings.
      */
     private void createGuestUser() {
         this.user = new User(false, 0, "Guest", null,
-                new UserFilters("ALL", "ALL", Arrays.asList("ALL"), true, true),
+                new UserFilters("ALL", "ALL", new ArrayList<>(Arrays.asList("ALL")), true, true,
+                    new ArrayList<>(Constants.DEFAULT_OS_LIST), 
+                    new ArrayList<>(Constants.DEFAULT_PRODUCT_LIST)
+                ),
                 new UserAlerts(),
                 new UserArchives(null),
-                new UserSettings(true, true, new Date(), true, true));
-
+                new UserSettings(true, true, new Date(), true, true, 15, Constants.MAX_ARCHIVED_CVES_ALLOWED));
+    
         SwingUtilities.invokeLater(() -> {
             mainFrame = new MainFrame(this, user);
             mainFrame.setButtonsStatus(false);
@@ -233,7 +275,10 @@ public class Main {
 
             // Load user filters, alerts, archives, and settings
             UserFilters filters = databaseService.getUserFilters(user.getUserId()).get();
-            user.setUserFilters(filters != null ? filters : new UserFilters("ALL", "ALL", Arrays.asList("ALL"), true, true));
+            user.setUserFilters(filters != null ? filters : new UserFilters("ALL", "ALL", Arrays.asList("ALL"), true, true,
+            Constants.DEFAULT_OS_LIST, 
+            Constants.DEFAULT_PRODUCT_LIST
+            ));
 
             UserAlerts alerts = databaseService.getUserAlerts(user.getUserId()).get();
             user.setUserAlerts(alerts != null ? alerts : new UserAlerts());
@@ -242,7 +287,7 @@ public class Main {
             user.setUserArchives(new UserArchives(archivedCVEs));
 
             UserSettings settings = databaseService.getUserSettings(user.getUserId()).get();
-            user.setUserSettings(settings != null ? settings : new UserSettings(true, true, new Date(), true, true));
+            user.setUserSettings(settings != null ? settings : new UserSettings(true, true, new Date(), true, true, 15, 100));
 
             return null; // Indicate success
         };
@@ -298,14 +343,19 @@ public class Main {
         if (user != null && user.isLoggedIn()) {
             // Clear session from the database
             SessionManager.clearSession(user.getUserId()).thenRun(() -> {
+                databaseService.enableDarkMode(user.getUserId());
+                applyLookAndFeel();
                 user.setLoggedIn(false);
                 user.setUserId(0);
                 user.setUsername("Guest");
                 user.setEmail(null);
-                user.setUserFilters(new UserFilters("ALL", "ALL", Arrays.asList("ALL"), true, true));
+                user.setUserFilters(new UserFilters("ALL", "ALL", Arrays.asList("ALL"), true, true,
+                Constants.DEFAULT_OS_LIST, 
+                Constants.DEFAULT_PRODUCT_LIST
+                 ));
                 user.setUserAlerts(new UserAlerts());
                 user.setUserArchives(new UserArchives(null));
-                user.setUserSettings(new UserSettings(true, true, new Date(), true, true));
+                user.setUserSettings(new UserSettings(true, true, new Date(), true, true, 15, 100));
 
                 stopCVEFetching();
                 SwingUtilities.invokeLater(() -> {
@@ -326,134 +376,150 @@ public class Main {
      * @param isManualReload True if the fetch is initiated manually by the user.
      */
     public void startCVEFetching(final boolean isManualReload) {
-        // Cancel any existing fetch operation
-        if (currentFetchTask != null && !currentFetchTask.isDone()) {
-            currentFetchTask.cancel(true);
-        }
-    
-        final boolean showProgress = isFirstFetch || isManualReload;
-        if (showProgress) {
-            SwingUtilities.invokeLater(() -> {
-                mainFrame.showProgressBar("Loading . . .");
-                mainFrame.setButtonsStatus(false);
-            });
-        }
-    
-        currentFetchTask = CompletableFuture.runAsync(() -> {
-            if (Thread.currentThread().isInterrupted()) return;
-
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
-
-            if (showProgress) {
-                SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(0));
+        // Prevent starting if already running
+        if (isFetcherRunning.compareAndSet(false, true)) {
+            // Cancel any existing fetch operation
+            if (currentFetchTask != null && !currentFetchTask.isDone()) {
+                currentFetchTask.cancel(true);
             }
-
-            if (!checkService.isInternetAvailable() || !checkService.isSystemDateCorrect()) {
+    
+            final boolean showProgress = isFirstFetch || isManualReload;
+            if (showProgress) {
                 SwingUtilities.invokeLater(() -> {
-                    mainFrame.showMessage("Connection lost or system date incorrect. The fetcher will stop.", "Error", JOptionPane.ERROR_MESSAGE);
+                    mainFrame.showProgressBar("Loading . . .");
+                    mainFrame.setButtonsStatus(false);
                 });
-                return;  // Stop the fetcher if validation fails
             }
-
-            if (Thread.currentThread().isInterrupted()) return;
-
-            // Calculate the start of the current day (midnight)
-            Calendar calendar = Calendar.getInstance();
-            calendar.set(Calendar.HOUR_OF_DAY, 0);
-            calendar.set(Calendar.MINUTE, 0);
-            calendar.set(Calendar.SECOND, 0);
-            calendar.set(Calendar.MILLISECOND, 0);
-
-            String lastModStartDate = dateFormat.format(calendar.getTime());  // Start of the current day
-            lastModEndDate = dateFormat.format(new Date());  // Current time
-
-            // Reset CVEs if needed
-            Boolean resetResult = databaseService.resetCVEs().join();
-            if (resetResult) {
-                SwingUtilities.invokeLater(() -> mainFrame.resetCVETable());
-            }
-
-            if (showProgress) {
-                SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(25));
-            }
-
-            if (Thread.currentThread().isInterrupted()) return;
-
-            try {
-                // Fetch the latest CVEs
-                List<CVE> cveList = cveFetcher.fetchLatestCVEs(lastModStartDate, lastModEndDate);
-                if (cveList != null && !cveList.isEmpty()) {
-                    if (showProgress) {
-                        SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(50));
-                    }
-
-                    if (Thread.currentThread().isInterrupted()) return;
-
-                    // Save filtered CVEs in DB
-                    databaseService.saveCVEData(cveList).join();
-
-                    if (user.isLoggedIn()) {
-                        checkAndSendNotifications();
-                    }
-
-                    if (showProgress) {
-                        SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(100));
-                    }
-
-                    TimeUnit.SECONDS.sleep(2); // Brief pause before updating UI
-
-                    if (Thread.currentThread().isInterrupted()) return;
-                    
-                    // Reload the CVE data in the GUI
-                    reloadCVEData();
-                } else {
-                    if (showProgress) {
-                        SwingUtilities.invokeLater(() -> {
-                            mainFrame.updateProgressBar(50);
-                            mainFrame.updateProgressBar(100);
-                        });
-                    }
-                    TimeUnit.SECONDS.sleep(2);
+    
+            currentFetchTask = CompletableFuture.runAsync(() -> {
+                if (Thread.currentThread().isInterrupted()) return;
+    
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    
+                if (showProgress) {
+                    SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(0));
                 }
-            } catch (IOException | ParseException | InterruptedException e) {
-                // Handle exceptions appropriately
-                e.printStackTrace();
-            }
-
-            // Set isFirstFetch to false after the first fetch
-            if (isFirstFetch) isFirstFetch = false;
-
-        }, fetcherExecutor).thenRun(() -> {
-            if (showProgress) {
-                SwingUtilities.invokeLater(() -> {
-                    if (mainFrame != null && mainFrame.isDisplayable() && user.isLoggedIn()) {
-                        mainFrame.hideProgressBar();
-                        mainFrame.setButtonsStatus(true);
+    
+                if (!checkService.isInternetAvailable() || !checkService.isSystemDateCorrect()) {
+                    SwingUtilities.invokeLater(() -> {
+                        mainFrame.showMessage("Connection lost or system date incorrect. The fetcher will stop.", "Error", JOptionPane.ERROR_MESSAGE);
+                    });
+                    isFetcherRunning.set(false); // Update flag
+                    return;  // Stop the fetcher if validation fails
+                }
+    
+                if (Thread.currentThread().isInterrupted()) {
+                    isFetcherRunning.set(false); // Update flag
+                    return;
+                }
+    
+                // Calculate the start of the current day (midnight)
+                Calendar calendar = Calendar.getInstance();
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+    
+                String lastModStartDate = dateFormat.format(calendar.getTime());  // Start of the current day
+                lastModEndDate = dateFormat.format(new Date());  // Current time
+    
+                // Reset CVEs if needed
+                Boolean resetResult = databaseService.resetCVEs().join();
+                if (resetResult) {
+                    SwingUtilities.invokeLater(() -> mainFrame.resetCVETable());
+                }
+    
+                if (showProgress) {
+                    SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(25));
+                }
+    
+                if (Thread.currentThread().isInterrupted()) {
+                    isFetcherRunning.set(false); // Update flag
+                    return;
+                }
+    
+                try {
+                    // Fetch the latest CVEs
+                    List<CVE> cveList = cveFetcher.fetchLatestCVEs(lastModStartDate, lastModEndDate);
+                    if (cveList != null && !cveList.isEmpty()) {
+                        if (showProgress) {
+                            SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(50));
+                        }
+    
+                        if (Thread.currentThread().isInterrupted()) {
+                            isFetcherRunning.set(false); // Update flag
+                            return;
+                        }
+    
+                        // Save filtered CVEs in DB
+                        databaseService.saveCVEData(cveList).join();
+    
+                        if (user.isLoggedIn()) {
+                            checkAndSendNotifications();
+                        }
+    
+                        if (showProgress) {
+                            SwingUtilities.invokeLater(() -> mainFrame.updateProgressBar(100));
+                        }
+    
+                        TimeUnit.SECONDS.sleep(2); // Brief pause before updating UI
+    
+                        if (Thread.currentThread().isInterrupted()) {
+                            isFetcherRunning.set(false); // Update flag
+                            return;
+                        }
+                        
+                        // Reload the CVE data in the GUI
+                        reloadCVEData();
+                    } else {
+                        if (showProgress) {
+                            SwingUtilities.invokeLater(() -> {
+                                mainFrame.updateProgressBar(50);
+                                mainFrame.updateProgressBar(100);
+                            });
+                        }
+                        TimeUnit.SECONDS.sleep(2);
                     }
-                });
-            }
-        
-            if (user.isLoggedIn()) {
+                } catch (IOException | ParseException | InterruptedException e) {
+                    // Handle exceptions appropriately
+                    e.printStackTrace();
+                }
+    
+                // Set isFirstFetch to false after the first fetch
+                if (isFirstFetch) isFirstFetch = false;
+            }, fetcherExecutor).thenRun(() -> {
+                if (showProgress) {
+                    SwingUtilities.invokeLater(() -> {
+                        if (mainFrame != null && mainFrame.isDisplayable() && user.isLoggedIn()) {
+                            mainFrame.hideProgressBar();
+                            mainFrame.setButtonsStatus(true);
+                        }
+                    });
+                }
+            
+                if (user.isLoggedIn()) {
+                    SwingUtilities.invokeLater(() -> {
+                        if (mainFrame != null && mainFrame.isDisplayable()) {
+                            mainFrame.setButtonsStatus(true);
+                        }
+                    });
+                    scheduleNextAutomaticFetch();  // Schedule next fetch if the user is still logged in
+                }
+            }).exceptionally(ex -> {
+                ex.printStackTrace();
                 SwingUtilities.invokeLater(() -> {
                     if (mainFrame != null && mainFrame.isDisplayable()) {
+                        mainFrame.hideProgressBar();
                         mainFrame.setButtonsStatus(true);
+                        // Optionally show an error message
+                        // mainFrame.showMessage("An error occurred while fetching CVE data.", "Fetch Error", JOptionPane.ERROR_MESSAGE);
                     }
                 });
-                scheduleNextAutomaticFetch();  // Schedule next fetch if the user is still logged in
-            }
-        }).exceptionally(ex -> {
-            ex.printStackTrace();
-            SwingUtilities.invokeLater(() -> {
-                if (mainFrame != null && mainFrame.isDisplayable()) {
-                    mainFrame.hideProgressBar();
-                    mainFrame.setButtonsStatus(true);
-                    // Optionally show an error message
-                    // mainFrame.showMessage("An error occurred while fetching CVE data.", "Fetch Error", JOptionPane.ERROR_MESSAGE);
-                }
-            });
-            return null;
-        });        
-    }    
+                isFetcherRunning.set(false); // Update flag on exception
+                return null;
+            });        
+        }
+    }
 
     /**
      * Stops the CVE data fetching process.
@@ -463,23 +529,42 @@ public class Main {
         if (currentFetchTask != null && !currentFetchTask.isDone()) {
             currentFetchTask.cancel(true);
         }
-
+    
         // If there is a scheduled task for fetching, cancel it
         if (scheduler != null) {
             scheduler.shutdownNow();
             scheduler = Executors.newScheduledThreadPool(1); // Reset the scheduler
         }
+    
+        // Update the fetcher running flag
+        isFetcherRunning.set(false);
+    
+        // Notify the SettingsFrame to update button states
+        if (settingsFrame != null) {
+            settingsFrame.updateFetcherButtons();
+        }
     }
+    
 
     /**
      * Schedules the next automatic CVE data fetch after a specified interval.
      */
     private void scheduleNextAutomaticFetch() {
+        int fetchInterval = user.getUserSettings().getFetchIntervalMinutes(); // Retrieve from settings
         scheduler.schedule(() -> {
             if (currentFetchTask == null || currentFetchTask.isDone()) {
                 startCVEFetching(false); // Automatic fetch (isManualReload = false)
             }
-        }, 15, TimeUnit.MINUTES);
+        }, fetchInterval, TimeUnit.MINUTES); // Use dynamic interval
+    }
+
+    /**
+     * Checks if the CVE Fetcher is currently running.
+     *
+     * @return true if running, false otherwise.
+     */
+    public boolean isCVEFetcherRunning() {
+        return isFetcherRunning.get();
     }
 
     /**
@@ -649,13 +734,21 @@ public class Main {
      * @param row    The row index in the table.
      */
     public void archiveCVE(int userId, String cveId, int row) {
+        
+        if (!checkService.isInternetAvailable() || !checkService.isSystemDateCorrect()) {
+            SwingUtilities.invokeLater(() -> {
+                mainFrame.showMessage("Invalid, Connection lost or system date incorrect.", "Error", JOptionPane.ERROR_MESSAGE);
+            });
+            return;
+        }
+
         // Check current archive count
         databaseService.countArchivedCVEs(userId).thenAccept(count -> {
-            if (count >= MAX_ARCHIVED_CVES) {
+            if (count >= Constants.MAX_ARCHIVED_CVES_ALLOWED) {
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane.showMessageDialog(
                             mainFrame,
-                            "You have reached the maximum archive limit (" + MAX_ARCHIVED_CVES + "). Please unarchive some CVEs before archiving new ones.",
+                            "You have reached the maximum archive limit (" + Constants.MAX_ARCHIVED_CVES_ALLOWED + "). Please unarchive some CVEs before archiving new ones.",
                             "Archive Limit Reached",
                             JOptionPane.WARNING_MESSAGE
                     );
@@ -731,6 +824,47 @@ public class Main {
             });
         }
     }
+
+    /**
+     * Enforces the archive limit by unarchiving oldest CVEs if necessary.
+     *
+     * @param limit The maximum number of archived CVEs allowed.
+     */
+    public void enforceArchiveLimit(int limit) {
+        // Fetch the count of archived CVEs
+        databaseService.countArchivedCVEs(user.getUserId()).thenAccept(count -> {
+            if (count > limit) {
+                int excess = count - limit;
+                // Fetch the oldest CVEs to unarchive
+                databaseService.getArchivedCVEs(user.getUserId())
+                    .thenAccept(archivedCVEs -> {
+                        // Sort CVEs by archived_at ascending
+                        archivedCVEs.sort(Comparator.comparing(CVE::getArchivedAt));
+                        for (int i = 0; i < excess; i++) {
+                            CVE cveToUnarchive = archivedCVEs.get(i);
+                            databaseService.unarchiveCVE(user.getUserId(), cveToUnarchive.getCveId())
+                                .thenAccept(success -> {
+                                    if (success) {
+                                        user.removeArchivedCVE(cveToUnarchive.getCveId());
+                                    }
+                                })
+                                .exceptionally(ex -> {
+                                    ex.printStackTrace();
+                                    return null;
+                                });
+                        }
+                    })
+                    .exceptionally(ex -> {
+                        ex.printStackTrace();
+                        return null;
+                    });
+            }
+        })
+        .exceptionally(ex -> {
+            ex.printStackTrace();
+            return null;
+        });
+    }    
 
     /**
      * Saves notifications to the database asynchronously.
@@ -831,10 +965,27 @@ public class Main {
     }
 
     /**
-     * Shows the settings frame (Placeholder).
+     * Shows the settings frame.
      */
     public void showSettingsFrame() {
-        SwingUtilities.invokeLater(() -> mainFrame.showMessage("Settings functionality will go here.", "Settings", JOptionPane.INFORMATION_MESSAGE));
+        if (!user.isLoggedIn()) {
+            JOptionPane.showMessageDialog(
+                    mainFrame,
+                    "Please log in to access settings.",
+                    "Access Denied",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            if (settingsFrame == null || !settingsFrame.isVisible()) { // Check if the frame is already open
+                settingsFrame = new SettingsFrame(this, user);
+                settingsFrame.setVisible(true);
+            } else {
+                settingsFrame.requestFocus(); // Bring the already open frame to the front
+            }
+        });
     }
     
     /**
@@ -850,6 +1001,7 @@ public class Main {
         }
         if (databaseService != null) {
             databaseService.closePool();
+            databaseService.shutdownExecutor();
         }
         if (checkService != null) {
             checkService.shutdown();

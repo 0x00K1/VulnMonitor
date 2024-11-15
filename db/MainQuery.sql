@@ -39,6 +39,8 @@ CREATE TABLE user_filters (
     product_filters TEXT,
     include_resolved BOOLEAN NOT NULL,
     include_rejected BOOLEAN NOT NULL,
+    available_os TEXT,
+    available_products TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -46,6 +48,8 @@ CREATE TABLE user_alerts (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     alerts_json LONGTEXT, -- Stores the alerts as JSON
+	available_os_json LONGTEXT, -- Stores available OS as JSON
+    available_products_json LONGTEXT, -- Stores available Products as JSON
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -82,6 +86,8 @@ CREATE TABLE user_settings (
     last_login TIMESTAMP,
     dark_mode BOOLEAN NOT NULL,
     startup BOOLEAN NOT NULL,
+    fetcher_interval INT NOT NULL DEFAULT 15,
+    archive_limit INT NOT NULL DEFAULT 100,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

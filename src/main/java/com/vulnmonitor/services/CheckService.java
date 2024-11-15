@@ -111,7 +111,7 @@ public class CheckService {
             }
             // Wait before retrying
             try {
-                TimeUnit.SECONDS.sleep(5);
+                TimeUnit.SECONDS.sleep(2);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

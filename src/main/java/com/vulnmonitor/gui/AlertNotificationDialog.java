@@ -14,7 +14,7 @@ public class AlertNotificationDialog extends JDialog {
     private static final long serialVersionUID = 1L;
     private final NotificationService notificationService;
     @SuppressWarnings("unused")
-    private final User user; // Just for WL
+    private final User user; // For accessing user settings
 
     /**
      * Create the dialog.
@@ -36,30 +36,38 @@ public class AlertNotificationDialog extends JDialog {
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         getContentPane().setLayout(new BorderLayout());
 
-        JPanel headerPanel = new JPanel();
-        headerPanel.setLayout(new BorderLayout());
-        headerPanel.setBackground(new Color(60, 63, 65)); // Dark background
+        // Fetch theme-based colors from UIManager
+        Color panelBackgroundColor = UIManager.getColor("Panel.background");
+        Color textAreaBackground = UIManager.getColor("TextArea.background");
+        Color textAreaForeground = UIManager.getColor("TextArea.foreground");
+        Color buttonBackgroundColor = UIManager.getColor("Button.background");
+        Color buttonForegroundColor = UIManager.getColor("Button.foreground");
 
+        // Header Panel
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(panelBackgroundColor);
+
+        // Load and set the alert icon
         ImageIcon alertIcon = new ImageIcon(getClass().getClassLoader().getResource("alert.png"));
         Image alertImage = alertIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
         ImageIcon scaledAlertIcon = new ImageIcon(alertImage);
 
-        JLabel AlertLabel = new JLabel(scaledAlertIcon);
-        headerPanel.add(AlertLabel, BorderLayout.CENTER);
-		
+        JLabel alertLabel = new JLabel(scaledAlertIcon);
+        alertLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        headerPanel.add(alertLabel, BorderLayout.CENTER);
+
         getContentPane().add(headerPanel, BorderLayout.NORTH);
 
         // Content Panel
-        JPanel contentPanel = new JPanel();
-        contentPanel.setBackground(new Color(43, 43, 43)); // Dark background
-        contentPanel.setLayout(new BorderLayout());
+        JPanel contentPanel = new JPanel(new BorderLayout());
+        contentPanel.setBackground(panelBackgroundColor);
 
         // CVE Details Area with Scroll Pane
         JTextArea cveDetailsArea = new JTextArea();
         cveDetailsArea.setEditable(false);
         cveDetailsArea.setFont(new Font("Consolas", Font.PLAIN, 14));
-        cveDetailsArea.setForeground(Color.WHITE);
-        cveDetailsArea.setBackground(new Color(60, 63, 65));
+        cveDetailsArea.setForeground(textAreaForeground);
+        cveDetailsArea.setBackground(textAreaBackground);
         cveDetailsArea.setLineWrap(true);
         cveDetailsArea.setWrapStyleWord(true);
 
@@ -77,19 +85,19 @@ public class AlertNotificationDialog extends JDialog {
         cveDetailsArea.setText(details.toString());
 
         JScrollPane scrollPane = new JScrollPane(cveDetailsArea);
+        scrollPane.setBackground(panelBackgroundColor); // Ensure scroll pane matches theme
         contentPanel.add(scrollPane, BorderLayout.CENTER);
 
         getContentPane().add(contentPanel, BorderLayout.CENTER);
 
         // Button Panel
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(new Color(60, 63, 65));
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.RIGHT));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setBackground(panelBackgroundColor);
 
         JButton okButton = new JButton("OK");
         okButton.setFocusPainted(false);
-        okButton.setBackground(new Color(75, 110, 175));
-        okButton.setForeground(Color.WHITE);
+        okButton.setBackground(buttonBackgroundColor);
+        okButton.setForeground(buttonForegroundColor);
         okButton.setFont(new Font("Arial", Font.BOLD, 14));
         okButton.setPreferredSize(new Dimension(80, 30));
         okButton.addActionListener(_ -> dispose());

@@ -32,6 +32,10 @@ public class MainFrame extends JFrame {
     // ====== CENTER ======
     private JTable cveTable;
     public static DefaultTableModel cveTableModel;
+    public JPopupMenu popupMenu;
+    public JMenuItem viewDetailsMenuItem;
+    public JMenuItem archiveMenuItem;
+    public JMenuItem copyCveIdMenuItem;
 
     // ====== EAST ======
     private JLabel osLabel;
@@ -113,35 +117,26 @@ public class MainFrame extends JFrame {
      */
     private void initNorthPanel() {
         JPanel northPanel = new JPanel(new BorderLayout());
-        northPanel.setBackground(new Color(45, 45, 48));  // Dark background
+        northPanel.setBackground(UIManager.getColor("Panel.background"));  // Dynamic background
         northPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20)); // Top, Left, Bottom, Right padding
 
-        // Title Label with Red Underline
+        // Title Label with Dynamic Foreground
         JPanel titlePanel = new JPanel(new BorderLayout());
-        titlePanel.setBackground(new Color(45, 45, 48));
+        titlePanel.setBackground(UIManager.getColor("Panel.background"));  // Dynamic background
         titleLabel = new JLabel("CVE Dashboard");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
-        titleLabel.setForeground(Color.WHITE);  // White text color
+        titleLabel.setForeground(UIManager.getColor("Label.foreground"));  // Dynamic text color
         titlePanel.add(titleLabel, BorderLayout.CENTER);
 
         northPanel.add(titlePanel, BorderLayout.WEST);
         
-        // For debugging . .
-        // JPanel infoPanel = new JPanel(new BorderLayout());
-        // infoPanel.setBackground(new Color(45, 45, 48));
-        // JLabel infoLabel = new JLabel("Logged as " + user.getUsername());
-        // infoLabel.setFont(new Font("Arial", Font.ITALIC, 10));
-        // infoLabel.setForeground(Color.WHITE);  // White text color
-        // infoPanel.add(infoLabel, BorderLayout.CENTER);
-        // northPanel.add(infoPanel, BorderLayout.CENTER);
-        
         // Panel for buttons (Logout or Login/Signup)
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.setBackground(new Color(45, 45, 48));
+        buttonPanel.setBackground(UIManager.getColor("Panel.background"));  // Dynamic background
 
         if (user.isLoggedIn()) {
             // Logout Button
-            logoutButton = new JButton("Logout");
+            logoutButton = new JButton("");
             logoutButton.setFont(new Font("Arial", Font.PLAIN, 16));
             logoutButton.setPreferredSize(new Dimension(100, 40));
             logoutButton.setFocusable(false);
@@ -158,6 +153,9 @@ public class MainFrame extends JFrame {
             });
 
             addHoverEffect(logoutButton);
+
+            // Set dynamic icon for Logout Button
+            updateLogoutIcon();
 
             buttonPanel.add(logoutButton);
         } else {
@@ -188,6 +186,8 @@ public class MainFrame extends JFrame {
         progressBar = new JProgressBar();
         progressBar.setStringPainted(true);
         progressBar.setVisible(false);  // Initially hidden
+        progressBar.setBackground(UIManager.getColor("ProgressBar.background"));
+        progressBar.setForeground(UIManager.getColor("ProgressBar.foreground"));
         northPanel.add(progressBar, BorderLayout.SOUTH);
 
         getContentPane().add(northPanel, BorderLayout.NORTH);
@@ -198,7 +198,7 @@ public class MainFrame extends JFrame {
      */
     private void initCenterPanel() {
         JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBackground(new Color(60, 63, 65));  // Dark gray background
+        centerPanel.setBackground(UIManager.getColor("Panel.background"));  // Dynamic background
         centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
         // Table Model with Column Names
@@ -217,11 +217,11 @@ public class MainFrame extends JFrame {
         cveTable.setFillsViewportHeight(true);
         cveTable.setRowHeight(30);
         cveTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 16));
-        cveTable.getTableHeader().setBackground(new Color(75, 75, 78));  // Darker header
-        cveTable.getTableHeader().setForeground(Color.WHITE);  // White text
+        cveTable.getTableHeader().setBackground(UIManager.getColor("TableHeader.background"));  // Dynamic header background
+        cveTable.getTableHeader().setForeground(UIManager.getColor("TableHeader.foreground"));  // Dynamic header text color
         cveTable.setFont(new Font("Arial", Font.PLAIN, 14));
-        cveTable.setForeground(Color.WHITE);
-        cveTable.setBackground(new Color(60, 63, 65));
+        cveTable.setForeground(UIManager.getColor("Table.foreground"));  // Dynamic text color
+        cveTable.setBackground(UIManager.getColor("Table.background"));  // Dynamic background
         cveTable.setFocusable(false);
 
         // Custom Cell Renderer to add borders between rows (lines between CVEs)
@@ -260,25 +260,25 @@ public class MainFrame extends JFrame {
                             c.setForeground(Color.GREEN.darker());
                             break;
                         default:
-                            c.setForeground(Color.WHITE);  // Default text color for N/A or unranked
+                            c.setForeground(UIManager.getColor("Table.foreground"));  // Default text color for N/A or unranked
                             break;
                     }
                 } else {
                     // Set default text color for other columns
-                    c.setForeground(Color.WHITE);
+                    c.setForeground(UIManager.getColor("Table.foreground"));
                 }
 
                 // Background color handling for selected vs non-selected rows
                 if (isSelected) {
-                    c.setBackground(new Color(70, 130, 180));  // Highlight color for selected row
+                    c.setBackground(UIManager.getColor("Table.selectionBackground"));  // Dynamic selection background
                 } else {
-                    c.setBackground(new Color(60, 63, 65));  // Default background color
+                    c.setBackground(UIManager.getColor("Table.background"));  // Dynamic background color
                 }
 
                 // Add a border between rows and columns
                 if (c instanceof JComponent) {
                     JComponent jc = (JComponent) c;
-                    jc.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.GRAY));  // Border between rows (1px gray line)
+                    jc.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, UIManager.getColor("Separator.background")));  // Dynamic border color
                 }
 
                 return c;
@@ -308,10 +308,10 @@ public class MainFrame extends JFrame {
         });
 
         // Create Popup Menu for right-click context menu
-        JPopupMenu popupMenu = new JPopupMenu();
-        JMenuItem viewDetailsMenuItem = new JMenuItem("View Details");
-        JMenuItem archiveMenuItem = new JMenuItem("Archive");
-        JMenuItem copyCveIdMenuItem = new JMenuItem("Copy CVE ID");
+        popupMenu = new JPopupMenu();
+        viewDetailsMenuItem = new JMenuItem("View Details");
+        archiveMenuItem = new JMenuItem("Archive");
+        copyCveIdMenuItem = new JMenuItem("Copy CVE ID");
 
         // Add action listeners for each menu item
         viewDetailsMenuItem.addActionListener(_ -> {
@@ -374,9 +374,10 @@ public class MainFrame extends JFrame {
                 if (controller.user.isLoggedIn()) {
                     controller.getDatabaseService().countArchivedCVEs(controller.user.getUserId()).thenAccept(count -> {
                         SwingUtilities.invokeLater(() -> {
-                            if (count >= controller.MAX_ARCHIVED_CVES) {
+                            int userArchiveLimit = controller.user.getUserSettings().getArchiveLimit();
+                            if (count >= userArchiveLimit) {
                                 archiveMenuItem.setEnabled(false);
-                                archiveMenuItem.setToolTipText("Archive limit reached (" + controller.MAX_ARCHIVED_CVES + ")");
+                                archiveMenuItem.setToolTipText("Archive limit reached (" + userArchiveLimit + ")");
                             } else {
                                 archiveMenuItem.setEnabled(true);
                                 archiveMenuItem.setToolTipText(null);
@@ -402,20 +403,19 @@ public class MainFrame extends JFrame {
     private void initEastPanel() {
         JPanel eastPanel = new JPanel();
         eastPanel.setLayout(new BoxLayout(eastPanel, BoxLayout.Y_AXIS));
-        eastPanel.setBackground(new Color(45, 45, 48));  // Dark background
+        eastPanel.setBackground(UIManager.getColor("Panel.background"));  // Dynamic background
         eastPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JSeparator separator1 = new JSeparator(SwingConstants.HORIZONTAL);
         separator1.setMaximumSize(new Dimension(500, 10));
-        eastPanel.add(Box.createRigidArea(new Dimension(0, -10))); // Additional space above the separator
         eastPanel.add(separator1);
         
-        eastPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Spacing
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Spacing
         
         // OS Information
         osLabel = new JLabel("OS: " + user.getUserFilters().getOsFilter());
         osLabel.setFont(new Font("Arial", Font.BOLD, 20));
-        osLabel.setForeground(Color.WHITE);  // White text
+        osLabel.setForeground(UIManager.getColor("Label.foreground"));  // Dynamic text color
         osLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         Dimension osLabelSize = new Dimension(170, osLabel.getPreferredSize().height);  // Fixed width of 170px # Use it for expand the east panel
         osLabel.setPreferredSize(osLabelSize);
@@ -428,7 +428,7 @@ public class MainFrame extends JFrame {
         highCveLabel = createColoredLabel("High CVEs: 0", new Color(255, 165, 0)); // Orange
         mediumCveLabel = createColoredLabel("Medium CVEs: 0", Color.YELLOW.darker());
         lowCveLabel = createColoredLabel("Low CVEs: 0", Color.GREEN.darker());
-        totalCveLabel = createColoredLabel("Total CVEs: 0", Color.WHITE);
+        totalCveLabel = createColoredLabel("Total CVEs: 0", UIManager.getColor("Label.foreground")); // Dynamic text color
         
         eastPanel.add(criticalCveLabel);
         eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
@@ -456,8 +456,14 @@ public class MainFrame extends JFrame {
         reloadButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         reloadButton.setMaximumSize(new Dimension(250, 40));
         reloadButton.setFocusable(false);
-        reloadButton.addActionListener(_ -> controller.startCVEFetching(true));
-        
+        reloadButton.addActionListener(_ -> {
+            if (!controller.isCVEFetcherRunning()) {
+                controller.startCVEFetching(true);
+            } else {
+                controller.stopCVEFetching();
+                controller.startCVEFetching(true);
+            }
+        });        
         // Filters Button
         filterButton = new JButton("Filters");
         filterButton.setFont(new Font("Arial", Font.PLAIN, 20));
@@ -511,17 +517,25 @@ public class MainFrame extends JFrame {
         addHoverEffect(settingsButton);
         addHoverEffect(aboutButton);
 
-        eastPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Spacing between line and buttons
+        // Apply dynamic background and foreground colors to buttons
+        applyDynamicButtonColors(reloadButton);
+        applyDynamicButtonColors(filterButton);
+        applyDynamicButtonColors(alertsButton);
+        applyDynamicButtonColors(archivesButton);
+        applyDynamicButtonColors(settingsButton);
+        applyDynamicButtonColors(aboutButton);
+
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Spacing between line and buttons
         eastPanel.add(reloadButton);
-        eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         eastPanel.add(filterButton);
-        eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         eastPanel.add(alertsButton);
-        eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         eastPanel.add(archivesButton);
-        eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         eastPanel.add(settingsButton);
-        eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         eastPanel.add(aboutButton);
 
         getContentPane().add(eastPanel, BorderLayout.EAST);
@@ -532,7 +546,7 @@ public class MainFrame extends JFrame {
      */
     private void initSouthPanel() {
         JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        southPanel.setBackground(new Color(45, 45, 48));  // Dark background
+        southPanel.setBackground(UIManager.getColor("Panel.background"));  // Dynamic background
         southPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 20, 20));
     
         // Search Field
@@ -549,9 +563,8 @@ public class MainFrame extends JFrame {
         searchButton = new JLabel();
         searchButton.setPreferredSize(new Dimension(40, 30));
         
-        // Load the search icon from the resources folder
-        ImageIcon searchIcon = new ImageIcon(getClass().getClassLoader().getResource("search.png"));
-        searchButton.setIcon(searchIcon);
+        // Update the search icon based on the current theme
+        updateSearchIcon();
         
         // Add MouseListener to simulate a button click
         searchButton.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -584,20 +597,35 @@ public class MainFrame extends JFrame {
      * Method to add hover effect to a button.
      */
     private void addHoverEffect(JButton button) {
-        button.setForeground(Color.WHITE);  // Default color
+        // Remove default button background to allow LAF styling
+        button.setContentAreaFilled(false);
+        button.setOpaque(true);
+        button.setBackground(UIManager.getColor("Button.background"));  // Dynamic background
+        button.setForeground(UIManager.getColor("Button.foreground"));  // Dynamic text color
 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setForeground(new Color(68, 110, 158));  // Use the specified RGB color on hover
+                button.setBackground(UIManager.getColor("Button.hoverBackground"));  // Dynamic hover background
+                button.setForeground(new Color(68, 110, 158));
                 button.setCursor(new Cursor(Cursor.HAND_CURSOR));  // Change cursor to hand
             }
 
             @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setForeground(Color.WHITE);  // Revert color when not hovering
+                button.setForeground(UIManager.getColor("Button.foreground"));
+                button.setBackground(UIManager.getColor("Button.background"));  // Revert to dynamic background
             }
         });
+    }
+
+    /**
+     * Applies dynamic background and foreground colors to buttons based on theme.
+     * @param button The JButton to style.
+     */
+    private void applyDynamicButtonColors(JButton button) {
+        button.setBackground(UIManager.getColor("Button.background"));
+        button.setForeground(UIManager.getColor("Button.foreground"));
     }
 
     // Method to show the About dialog with clickable URLs
@@ -633,6 +661,83 @@ public class MainFrame extends JFrame {
 
         // Show dialog with clickable links
         JOptionPane.showMessageDialog(this, aboutPane, "About VulnMonitor", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Updates the search icon based on the current theme.
+     */
+    private void updateSearchIcon() {
+        String lookAndFeel = UIManager.getLookAndFeel().getClass().getSimpleName().toLowerCase();
+        String iconPath;
+
+        if (lookAndFeel.contains("dark")) {
+            iconPath = "search-light.png";
+        } else {
+            iconPath = "search-dark.png";
+        }
+
+        // Attempt to load the appropriate icon
+        try {
+            ImageIcon searchIcon = new ImageIcon(getClass().getClassLoader().getResource(iconPath));
+            if (searchIcon.getIconWidth() > 0 && searchIcon.getIconHeight() > 0) { // Verify icon loaded successfully
+                searchButton.setIcon(searchIcon);
+            } else {
+                throw new Exception("Icon not found: " + iconPath);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Fallback to a default icon or handle the missing icon scenario
+            searchButton.setIcon(null);
+        }
+    }
+
+    /**
+     * Updates the icon of the logout button based on the current theme.
+     */
+    private void updateLogoutIcon() {
+        String lookAndFeel = UIManager.getLookAndFeel().getClass().getSimpleName().toLowerCase();
+        String iconPath;
+
+        if (lookAndFeel.contains("dark")) {
+            iconPath = "logout-light.png"; // Icon for dark theme
+        } else {
+            iconPath = "logout-dark.png"; // Icon for light theme
+        }
+
+        // Attempt to load the appropriate icon
+        try {
+            ImageIcon logoutIcon = new ImageIcon(getClass().getClassLoader().getResource(iconPath));
+            if (logoutIcon.getIconWidth() > 0 && logoutIcon.getIconHeight() > 0) { // Verify icon loaded successfully
+                logoutButton.setIcon(logoutIcon); // Set the icon
+                logoutButton.setHorizontalTextPosition(SwingConstants.RIGHT); // Position text beside icon
+                logoutButton.setIconTextGap(8); // Add space between icon and text
+            } else {
+                throw new Exception("Icon not found: " + iconPath);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Fallback to no icon if an issue occurs
+            logoutButton.setIcon(null);
+        }
+    }
+
+    /**
+     * Updates the search icon based on the current theme.
+     */
+    private void updatePopupMenu() {
+        String lookAndFeel = UIManager.getLookAndFeel().getClass().getSimpleName().toLowerCase();
+
+        if (lookAndFeel.contains("dark")) {
+            popupMenu.setBackground(UIManager.getColor("Panel.background"));
+            viewDetailsMenuItem.setForeground(Color.WHITE);
+            archiveMenuItem.setForeground(Color.WHITE);
+            copyCveIdMenuItem.setForeground(Color.WHITE);
+        } else {
+            popupMenu.setBackground(UIManager.getColor("Panel.background"));
+            viewDetailsMenuItem.setForeground(Color.BLACK);
+            archiveMenuItem.setForeground(Color.BLACK);
+            copyCveIdMenuItem.setForeground(Color.BLACK);        
+        } 
     }
 
     private void handleSearch() {
@@ -684,6 +789,10 @@ public class MainFrame extends JFrame {
      * @param cveList The list of CVEs to display.
      */
     public void updateCVETable(List<CVE> cveList) {
+        if (!SwingUtilities.isEventDispatchThread()) {
+            SwingUtilities.invokeLater(() -> updateCVETable(cveList));
+            return;
+        }
         cveTableModel.setRowCount(0);  // Clear existing rows
 
         int criticalCount = 0;
@@ -768,5 +877,11 @@ public class MainFrame extends JFrame {
      */
     public void showMessage(String message, String title, int messageType) {
         JOptionPane.showMessageDialog(this, message, title, messageType);
+    }
+
+    public void fUpdateComponent() {
+        updateSearchIcon();
+        updateLogoutIcon();
+        updatePopupMenu();
     }
 }

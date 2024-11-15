@@ -82,13 +82,13 @@ public class ArchivesFrame extends JFrame {
      */
     private void initNorthPanel() {
         JPanel northPanel = new JPanel(new BorderLayout());
-        northPanel.setBackground(new Color(45, 45, 48));  // Dark background
+        northPanel.setBackground(UIManager.getColor("ArchivesFrame.background"));  // Dynamic background
         northPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20)); // Top, Left, Bottom, Right padding
 
         // Title Label
         titleLabel = new JLabel("Archived CVEs");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setForeground(Color.WHITE);  // White text color
+        titleLabel.setForeground(UIManager.getColor("ArchivesFrame.foreground"));  // Dynamic text color
         northPanel.add(titleLabel, BorderLayout.WEST);
 
         getContentPane().add(northPanel, BorderLayout.NORTH);
@@ -99,7 +99,7 @@ public class ArchivesFrame extends JFrame {
      */
     private void initCenterPanel() {
         JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setBackground(new Color(60, 63, 65));  // Dark gray background
+        centerPanel.setBackground(UIManager.getColor("ArchivesFrame.background"));  // Dynamic background
         centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
         // Table Model with Column Names
@@ -118,11 +118,11 @@ public class ArchivesFrame extends JFrame {
         archivedCveTable.setFillsViewportHeight(true);
         archivedCveTable.setRowHeight(30);
         archivedCveTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 16));
-        archivedCveTable.getTableHeader().setBackground(new Color(75, 75, 78));  // Darker header
-        archivedCveTable.getTableHeader().setForeground(Color.WHITE);  // White text
+        archivedCveTable.getTableHeader().setBackground(UIManager.getColor("TableHeader.background"));  // Dynamic header background
+        archivedCveTable.getTableHeader().setForeground(UIManager.getColor("TableHeader.foreground"));  // Dynamic header text color
         archivedCveTable.setFont(new Font("Arial", Font.PLAIN, 14));
-        archivedCveTable.setForeground(Color.WHITE);
-        archivedCveTable.setBackground(new Color(60, 63, 65));
+        archivedCveTable.setForeground(UIManager.getColor("Table.foreground"));  // Dynamic text color
+        archivedCveTable.setBackground(UIManager.getColor("Table.background"));  // Dynamic background
         archivedCveTable.setFocusable(false);
 
         // Custom Cell Renderer to add borders and color coding
@@ -160,24 +160,25 @@ public class ArchivesFrame extends JFrame {
                             c.setForeground(Color.GREEN.darker());
                             break;
                         default:
-                            c.setForeground(Color.WHITE);
+                            c.setForeground(UIManager.getColor("Table.foreground"));  // Default text color
                             break;
                     }
                 } else {
-                    c.setForeground(Color.WHITE);
+                    // Set default text color for other columns
+                    c.setForeground(UIManager.getColor("Table.foreground"));
                 }
 
                 // Background color handling for selected vs non-selected rows
                 if (isSelected) {
-                    c.setBackground(new Color(70, 130, 180));  // Highlight color for selected row
+                    c.setBackground(UIManager.getColor("Table.selectionBackground"));  // Dynamic selection background
                 } else {
-                    c.setBackground(new Color(60, 63, 65));  // Default background color
+                    c.setBackground(UIManager.getColor("Table.background"));  // Dynamic background color
                 }
 
                 // Add a border between rows and columns
                 if (c instanceof JComponent) {
                     JComponent jc = (JComponent) c;
-                    jc.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, Color.GRAY));  // Border between rows (1px gray line)
+                    jc.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, UIManager.getColor("Separator.background")));  // Dynamic border color
                 }
 
                 return c;
@@ -213,7 +214,7 @@ public class ArchivesFrame extends JFrame {
      */
     private void initSouthPanel() {
         JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        southPanel.setBackground(new Color(45, 45, 48));  // Dark background
+        southPanel.setBackground(UIManager.getColor("ArchivesFrame.background"));  // Dynamic background
         southPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 20, 20));
 
         // Unarchive Button
@@ -240,6 +241,11 @@ public class ArchivesFrame extends JFrame {
         addHoverEffect(unarchiveButton);
         addHoverEffect(exportButton);
         addHoverEffect(viewDetailsButton);
+
+        // Apply dynamic background and foreground colors to buttons
+        applyDynamicButtonColors(unarchiveButton);
+        applyDynamicButtonColors(exportButton);
+        applyDynamicButtonColors(viewDetailsButton);
 
         southPanel.add(unarchiveButton);
         southPanel.add(Box.createRigidArea(new Dimension(10, 0))); // Spacing
@@ -442,20 +448,35 @@ public class ArchivesFrame extends JFrame {
      * Adds hover effect to a button.
      */
     private void addHoverEffect(JButton button) {
-        button.setForeground(Color.WHITE);  // Default color
+        // Use dynamic colors from UIManager
+        button.setBackground(UIManager.getColor("Button.background"));
+        button.setForeground(UIManager.getColor("Button.foreground"));
+
+        button.setContentAreaFilled(false);
+        button.setOpaque(true);
 
         button.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
-                button.setForeground(new Color(68, 110, 158));  // Use the specified RGB color on hover
+                button.setBackground(UIManager.getColor("Button.hoverBackground"));  // Dynamic hover background
+                button.setForeground(new Color(68, 110, 158));
                 button.setCursor(new Cursor(Cursor.HAND_CURSOR));  // Change cursor to hand
             }
 
             @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
-                button.setForeground(Color.WHITE);  // Revert color when not hovering
+                button.setForeground(UIManager.getColor("Button.foreground"));
+                button.setBackground(UIManager.getColor("Button.background"));  // Revert to dynamic background
             }
         });
+    }
+
+    /**
+     * Applies dynamic background and foreground colors to buttons based on theme.
+     * @param button The JButton to style.
+     */
+    private void applyDynamicButtonColors(JButton button) {
+        button.setBackground(UIManager.getColor("Button.background"));
+        button.setForeground(UIManager.getColor("Button.foreground"));
     }
 
     /**
@@ -487,5 +508,5 @@ public class ArchivesFrame extends JFrame {
             });
             return null;
         });
-    }    
+    }
 }
