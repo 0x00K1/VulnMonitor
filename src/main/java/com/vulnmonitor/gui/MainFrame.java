@@ -5,7 +5,6 @@ import com.vulnmonitor.model.User;
 import com.vulnmonitor.Main;
 
 import javax.swing.*;
-import javax.swing.event.HyperlinkEvent;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.AbstractDocument;
@@ -14,6 +13,8 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseEvent;
 import java.awt.*;
 import java.util.List;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 /**
  * MainFrame represents the main window of the VulnMonitor CVE Dashboard application.
@@ -59,19 +60,25 @@ public class MainFrame extends JFrame {
     protected Main controller;
     private User user;
 
+    // Reference to AnimatedBorderPanel for resource management
+    public AnimatedBorderPanel animatedBorderPanel;
+
     /**
      * Constructor to set up the main frame.
+     *
+     * @param controller The main controller handling application logic.
+     * @param user       The current user.
      */
     public MainFrame(Main controller, User user) {
         this.controller = controller;
         this.user = user;
-    
+
         setTitle("VulnMonitor - CVE Dashboard");
         setSize(1200, 800);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null); // Center the frame on the screen
         setResizable(false);
-    
+
         setApplicationIcon();
 
         // Disable maximization by limiting window state changes
@@ -81,16 +88,24 @@ public class MainFrame extends JFrame {
                 setExtendedState(JFrame.NORMAL);
             }
         });
-    
-        initComponents();
-    
-        setVisible(true);
-    }    
 
+        initComponents();
+
+        setVisible(true);
+    }
+
+    /**
+     * Sets the application icon.
+     */
     private void setApplicationIcon() {
-        ImageIcon icon = new ImageIcon(getClass().getResource("/VulnMonitorICON.png"));
-        Image image = icon.getImage().getScaledInstance(120, 120, Image.SCALE_SMOOTH);
-        setIconImage(image);
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getResource("/VulnMonitorICON.png"));
+            Image image = icon.getImage().getScaledInstance(120, 120, Image.SCALE_SMOOTH);
+            setIconImage(image);
+        } catch (Exception e) {
+            System.err.println("Application icon not found.");
+            // Optionally set a default icon or leave it as default
+        }
     }
 
     /**
@@ -124,12 +139,12 @@ public class MainFrame extends JFrame {
         JPanel titlePanel = new JPanel(new BorderLayout());
         titlePanel.setBackground(UIManager.getColor("Panel.background"));  // Dynamic background
         titleLabel = new JLabel("CVE Dashboard");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 28));
         titleLabel.setForeground(UIManager.getColor("Label.foreground"));  // Dynamic text color
         titlePanel.add(titleLabel, BorderLayout.CENTER);
 
         northPanel.add(titlePanel, BorderLayout.WEST);
-        
+
         // Panel for buttons (Logout or Login/Signup)
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setBackground(UIManager.getColor("Panel.background"));  // Dynamic background
@@ -137,16 +152,16 @@ public class MainFrame extends JFrame {
         if (user.isLoggedIn()) {
             // Logout Button
             logoutButton = new JButton("");
-            logoutButton.setFont(new Font("Arial", Font.PLAIN, 16));
-            logoutButton.setPreferredSize(new Dimension(100, 40));
+            logoutButton.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            logoutButton.setPreferredSize(new Dimension(120, 40));
             logoutButton.setFocusable(false);
             logoutButton.addActionListener(_ -> {
                 int confirmed = JOptionPane.showConfirmDialog(
-                        this, 
-                        "Are you sure you want to logout ?", 
-                        "Logout Confirmation", 
+                        this,
+                        "Are you sure you want to logout?",
+                        "Logout Confirmation",
                         JOptionPane.YES_NO_OPTION);
-                
+
                 if (confirmed == JOptionPane.YES_OPTION) {
                     controller.logout();  // Proceed with logout if confirmed
                 }
@@ -161,14 +176,14 @@ public class MainFrame extends JFrame {
         } else {
             // Login Button
             loginButton = new JButton("Login");
-            loginButton.setFont(new Font("Arial", Font.PLAIN, 16));
+            loginButton.setFont(new Font("Segoe UI", Font.PLAIN, 16));
             loginButton.setPreferredSize(new Dimension(100, 40));
             loginButton.setFocusable(false);
             loginButton.addActionListener(_ -> controller.showLoginFrame());
 
             // Signup Button
             signupButton = new JButton("Signup");
-            signupButton.setFont(new Font("Arial", Font.PLAIN, 16));
+            signupButton.setFont(new Font("Segoe UI", Font.PLAIN, 16));
             signupButton.setPreferredSize(new Dimension(100, 40));
             signupButton.setFocusable(false);
             signupButton.addActionListener(_ -> controller.handleSignup());
@@ -187,7 +202,7 @@ public class MainFrame extends JFrame {
         progressBar.setStringPainted(true);
         progressBar.setVisible(false);  // Initially hidden
         progressBar.setBackground(UIManager.getColor("ProgressBar.background"));
-        progressBar.setForeground(UIManager.getColor("ProgressBar.foreground"));
+        progressBar.setForeground(new Color(76, 135, 200)); // Custom blue color
         northPanel.add(progressBar, BorderLayout.SOUTH);
 
         getContentPane().add(northPanel, BorderLayout.NORTH);
@@ -216,10 +231,10 @@ public class MainFrame extends JFrame {
         cveTable = new JTable(cveTableModel);
         cveTable.setFillsViewportHeight(true);
         cveTable.setRowHeight(30);
-        cveTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 16));
+        cveTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 16));
         cveTable.getTableHeader().setBackground(UIManager.getColor("TableHeader.background"));  // Dynamic header background
         cveTable.getTableHeader().setForeground(UIManager.getColor("TableHeader.foreground"));  // Dynamic header text color
-        cveTable.setFont(new Font("Arial", Font.PLAIN, 14));
+        cveTable.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         cveTable.setForeground(UIManager.getColor("Table.foreground"));  // Dynamic text color
         cveTable.setBackground(UIManager.getColor("Table.background"));  // Dynamic background
         cveTable.setFocusable(false);
@@ -248,16 +263,16 @@ public class MainFrame extends JFrame {
                     String severity = value != null ? value.toString().toLowerCase() : "";
                     switch (severity) {
                         case "critical":
-                            c.setForeground(Color.RED);
+                            c.setForeground(new Color(220, 20, 60)); // Crimson Red
                             break;
                         case "high":
-                            c.setForeground(new Color(255, 165, 0));
+                            c.setForeground(new Color(255, 140, 0)); // Dark Orange
                             break;
                         case "medium":
-                            c.setForeground(Color.YELLOW.darker());
+                            c.setForeground(new Color(255, 215, 0)); // Gold
                             break;
                         case "low":
-                            c.setForeground(Color.GREEN.darker());
+                            c.setForeground(new Color(34, 139, 34)); // Forest Green
                             break;
                         default:
                             c.setForeground(UIManager.getColor("Table.foreground"));  // Default text color for N/A or unranked
@@ -270,15 +285,15 @@ public class MainFrame extends JFrame {
 
                 // Background color handling for selected vs non-selected rows
                 if (isSelected) {
-                    c.setBackground(UIManager.getColor("Table.selectionBackground"));  // Dynamic selection background
+                    c.setBackground(new Color(70, 130, 180));  // Steel Blue selection
                 } else {
                     c.setBackground(UIManager.getColor("Table.background"));  // Dynamic background color
                 }
 
-                // Add a border between rows and columns
+                // Add a subtle border between cells
                 if (c instanceof JComponent) {
                     JComponent jc = (JComponent) c;
-                    jc.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 1, UIManager.getColor("Separator.background")));  // Dynamic border color
+                    jc.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(211, 211, 211)));  // Light gray borders
                 }
 
                 return c;
@@ -290,7 +305,12 @@ public class MainFrame extends JFrame {
 
         // Add Scroll Pane to Table
         JScrollPane tableScrollPane = new JScrollPane(cveTable);
-        centerPanel.add(tableScrollPane, BorderLayout.CENTER);
+
+        // Wrap the tableScrollPane with AnimatedBorderPanel
+        animatedBorderPanel = new AnimatedBorderPanel(tableScrollPane);
+
+        // Add the animated border panel to center panel
+        centerPanel.add(animatedBorderPanel, BorderLayout.CENTER);
 
         // Add Mouse Listener to detect row clicks
         cveTable.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -406,30 +426,31 @@ public class MainFrame extends JFrame {
         eastPanel.setBackground(UIManager.getColor("Panel.background"));  // Dynamic background
         eastPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // Separator
         JSeparator separator1 = new JSeparator(SwingConstants.HORIZONTAL);
         separator1.setMaximumSize(new Dimension(500, 10));
         eastPanel.add(separator1);
-        
-        eastPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Spacing
-        
+
+        eastPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Spacing
+
         // OS Information
         osLabel = new JLabel("OS: " + user.getUserFilters().getOsFilter());
-        osLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        osLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         osLabel.setForeground(UIManager.getColor("Label.foreground"));  // Dynamic text color
         osLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        Dimension osLabelSize = new Dimension(170, osLabel.getPreferredSize().height);  // Fixed width of 170px # Use it for expand the east panel
+        Dimension osLabelSize = new Dimension(170, osLabel.getPreferredSize().height);  // Fixed width of 170px
         osLabel.setPreferredSize(osLabelSize);
         osLabel.setMaximumSize(osLabelSize);
         eastPanel.add(osLabel);
         eastPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Spacing
 
         // CVE Counts with Color Coding
-        criticalCveLabel = createColoredLabel("Critical CVEs: 0", Color.RED);
-        highCveLabel = createColoredLabel("High CVEs: 0", new Color(255, 165, 0)); // Orange
-        mediumCveLabel = createColoredLabel("Medium CVEs: 0", Color.YELLOW.darker());
-        lowCveLabel = createColoredLabel("Low CVEs: 0", Color.GREEN.darker());
+        criticalCveLabel = createColoredLabel("Critical CVEs: 0", new Color(220, 20, 60)); // Crimson Red
+        highCveLabel = createColoredLabel("High CVEs: 0", new Color(255, 140, 0)); // Dark Orange
+        mediumCveLabel = createColoredLabel("Medium CVEs: 0", new Color(255, 215, 0)); // Gold
+        lowCveLabel = createColoredLabel("Low CVEs: 0", new Color(34, 139, 34)); // Forest Green
         totalCveLabel = createColoredLabel("Total CVEs: 0", UIManager.getColor("Label.foreground")); // Dynamic text color
-        
+
         eastPanel.add(criticalCveLabel);
         eastPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         eastPanel.add(highCveLabel);
@@ -441,17 +462,18 @@ public class MainFrame extends JFrame {
         eastPanel.add(totalCveLabel);
 
         eastPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Spacing
-        
+
+        // Separator
         JSeparator separator2 = new JSeparator(SwingConstants.HORIZONTAL);
         separator2.setMaximumSize(new Dimension(500, 10));
         eastPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Additional space above the separator
         eastPanel.add(separator2);
 
         eastPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Spacing
-        
+
         // Reload Button
         reloadButton = new JButton("Reload");
-        reloadButton.setFont(new Font("Arial", Font.PLAIN, 20));
+        reloadButton.setFont(new Font("Segoe UI", Font.PLAIN, 20));
         reloadButton.setPreferredSize(new Dimension(120, 40));
         reloadButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         reloadButton.setMaximumSize(new Dimension(250, 40));
@@ -459,14 +481,16 @@ public class MainFrame extends JFrame {
         reloadButton.addActionListener(_ -> {
             if (!controller.isCVEFetcherRunning()) {
                 controller.startCVEFetching(true);
+                animatedBorderPanel.startAnimation(); // Start border animation
             } else {
                 controller.stopCVEFetching();
                 controller.startCVEFetching(true);
             }
-        });        
+        });
+
         // Filters Button
         filterButton = new JButton("Filters");
-        filterButton.setFont(new Font("Arial", Font.PLAIN, 20));
+        filterButton.setFont(new Font("Segoe UI", Font.PLAIN, 20));
         filterButton.setPreferredSize(new Dimension(120, 40));
         filterButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         filterButton.setMaximumSize(new Dimension(250, 40));
@@ -475,7 +499,7 @@ public class MainFrame extends JFrame {
 
         // Alerts Button
         alertsButton = new JButton("Alerts");
-        alertsButton.setFont(new Font("Arial", Font.PLAIN, 20));
+        alertsButton.setFont(new Font("Segoe UI", Font.PLAIN, 20));
         alertsButton.setPreferredSize(new Dimension(120, 40));
         alertsButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         alertsButton.setMaximumSize(new Dimension(250, 40));
@@ -484,16 +508,16 @@ public class MainFrame extends JFrame {
 
         // Archive Button
         archivesButton = new JButton("Archives");
-        archivesButton.setFont(new Font("Arial", Font.PLAIN, 20));
+        archivesButton.setFont(new Font("Segoe UI", Font.PLAIN, 20));
         archivesButton.setPreferredSize(new Dimension(120, 40));
         archivesButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         archivesButton.setMaximumSize(new Dimension(250, 40));
         archivesButton.setFocusable(false);
         archivesButton.addActionListener(_ -> controller.showArchivesFrame());  // Define the alerts logic in this method
-        
+
         // Settings Button
         settingsButton = new JButton("Settings");
-        settingsButton.setFont(new Font("Arial", Font.PLAIN, 20));
+        settingsButton.setFont(new Font("Segoe UI", Font.PLAIN, 20));
         settingsButton.setPreferredSize(new Dimension(120, 40));
         settingsButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         settingsButton.setMaximumSize(new Dimension(250, 40));
@@ -502,7 +526,7 @@ public class MainFrame extends JFrame {
 
         // About Button
         aboutButton = new JButton("About");
-        aboutButton.setFont(new Font("Arial", Font.PLAIN, 20));
+        aboutButton.setFont(new Font("Segoe UI", Font.PLAIN, 20));
         aboutButton.setPreferredSize(new Dimension(120, 40));
         aboutButton.setAlignmentX(Component.LEFT_ALIGNMENT); // Align left
         aboutButton.setMaximumSize(new Dimension(250, 40));
@@ -525,6 +549,7 @@ public class MainFrame extends JFrame {
         applyDynamicButtonColors(settingsButton);
         applyDynamicButtonColors(aboutButton);
 
+        // Add buttons to the east panel with spacing
         eastPanel.add(Box.createRigidArea(new Dimension(0, 5))); // Spacing between line and buttons
         eastPanel.add(reloadButton);
         eastPanel.add(Box.createRigidArea(new Dimension(0, 20)));
@@ -548,56 +573,58 @@ public class MainFrame extends JFrame {
         JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         southPanel.setBackground(UIManager.getColor("Panel.background"));  // Dynamic background
         southPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 20, 20));
-    
+
         // Search Field
         searchField = new JTextField(68);
         searchField.setFont(new Font("Arial", Font.PLAIN, 16));
         searchField.setPreferredSize(new Dimension(140, 30));
         searchField.setToolTipText("Search CVEs...");
-        // searchField.setFocusable(false);
-    
+
         // Limit the input length to 100 characters 
         ((AbstractDocument) searchField.getDocument()).setDocumentFilter(new Main.LengthFilter(100));
-    
+
         // Search Icon as Label
         searchButton = new JLabel();
         searchButton.setPreferredSize(new Dimension(40, 30));
-        
+        searchButton.setCursor(new Cursor(Cursor.HAND_CURSOR)); // Default cursor
+
         // Update the search icon based on the current theme
         updateSearchIcon();
-        
+
         // Add MouseListener to simulate a button click
         searchButton.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 handleSearch();  // Trigger the search action on click
             }
-    
+
             @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 searchButton.setCursor(new Cursor(Cursor.HAND_CURSOR));  // Change cursor to hand
             }
-    
+
             @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 searchButton.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));  // Revert cursor when not hovering
             }
         });
         searchField.addActionListener(_ -> handleSearch());
-    
+
         // Add components to South Panel
         southPanel.add(searchField);
         southPanel.add(Box.createRigidArea(new Dimension(5, 0)));
         southPanel.add(searchButton); 
-    
+
         getContentPane().add(southPanel, BorderLayout.SOUTH);
     }    
 
     /**
-     * Method to add hover effect to a button.
+     * Adds hover effect to a button.
+     *
+     * @param button The JButton to apply the hover effect to.
      */
     private void addHoverEffect(JButton button) {
-        // Remove default button background to allow LAF styling
+        // Remove default button background to allow custom styling
         button.setContentAreaFilled(false);
         button.setOpaque(true);
         button.setBackground(UIManager.getColor("Button.background"));  // Dynamic background
@@ -621,6 +648,7 @@ public class MainFrame extends JFrame {
 
     /**
      * Applies dynamic background and foreground colors to buttons based on theme.
+     *
      * @param button The JButton to style.
      */
     private void applyDynamicButtonColors(JButton button) {
@@ -628,39 +656,27 @@ public class MainFrame extends JFrame {
         button.setForeground(UIManager.getColor("Button.foreground"));
     }
 
-    // Method to show the About dialog with clickable URLs
-    private void showAboutDialog() {
-        String repoUrl = "https://github.com/0x00K1/VulnMonitor";
-        String userGuideUrl = "http://127.0.0.1/vulnmonitor/userguide";
-        
-        String aboutMessage = "<html><body style='text-align: center;'>"
-            + "<h2>VulnMonitor - CVE Dashboard</h2>"
-            + "<p>Version: x.x</p>"
-            + "<p>Author: Group 6</p>"
-            + "<p>Stay up-to-date with the latest vulnerabilities to secure your systems :)</p>"
-            + "<p style='margin-top: 20px;'><a href='" + repoUrl + "'>Repository</a></p>"
-            + "<p style='margin-top: 10px;'><a href='" + userGuideUrl + "'>UserGuide</a></p>"
-            + "</body></html>";
+    /**
+     * Creates a colored label with specified text and color.
+     *
+     * @param text  The text to display.
+     * @param color The color of the text.
+     * @return A JLabel with the specified properties.
+     */
+    private JLabel createColoredLabel(String text, Color color) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        label.setForeground(color);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return label;
+    }
 
-        // Use a JEditorPane for handling clickable HTML links properly
-        JEditorPane aboutPane = new JEditorPane("text/html", aboutMessage);
-        aboutPane.setEditable(false);
-        aboutPane.setOpaque(false);
-        aboutPane.setBorder(null);
-        
-        // Add Hyperlink Listener to detect which link is clicked
-        aboutPane.addHyperlinkListener(e -> {
-            if (HyperlinkEvent.EventType.ACTIVATED.equals(e.getEventType())) {
-                try {
-                    Desktop.getDesktop().browse(e.getURL().toURI());  // Open the clicked link
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
-
-        // Show dialog with clickable links
-        JOptionPane.showMessageDialog(this, aboutPane, "About VulnMonitor", JOptionPane.INFORMATION_MESSAGE);
+    /**
+     * Shows the enhanced About dialog.
+     */
+    public void showAboutDialog() {
+        AboutDialog aboutDialog = new AboutDialog(this);
+        aboutDialog.setVisible(true);
     }
 
     /**
@@ -695,6 +711,10 @@ public class MainFrame extends JFrame {
      * Updates the icon of the logout button based on the current theme.
      */
     private void updateLogoutIcon() {
+        if (logoutButton == null) {
+            return; // Logout button might not be initialized if the user is not logged in
+        }
+
         String lookAndFeel = UIManager.getLookAndFeel().getClass().getSimpleName().toLowerCase();
         String iconPath;
 
@@ -722,7 +742,7 @@ public class MainFrame extends JFrame {
     }
 
     /**
-     * Updates the search icon based on the current theme.
+     * Updates the popup menu based on the current theme.
      */
     private void updatePopupMenu() {
         String lookAndFeel = UIManager.getLookAndFeel().getClass().getSimpleName().toLowerCase();
@@ -740,6 +760,9 @@ public class MainFrame extends JFrame {
         } 
     }
 
+    /**
+     * Handles the search functionality.
+     */
     private void handleSearch() {
         String query = searchField.getText().trim();
         if (!query.isEmpty()) {
@@ -760,19 +783,37 @@ public class MainFrame extends JFrame {
         }
     }    
 
+    /**
+     * Displays the progress bar with a custom message.
+     *
+     * @param text The message to display on the progress bar.
+     */
     public void showProgressBar(String text) {
         progressBar.setString(text);
         progressBar.setVisible(true);
     }
     
+    /**
+     * Updates the progress bar's value.
+     *
+     * @param value The new value of the progress bar.
+     */
     public void updateProgressBar(int value) {
         progressBar.setValue(value);
     }
     
+    /**
+     * Hides the progress bar.
+     */
     public void hideProgressBar() {
         progressBar.setVisible(false);
     }
     
+    /**
+     * Enables or disables the main buttons based on the provided status.
+     *
+     * @param enabled True to enable buttons, false to disable.
+     */
     public void setButtonsStatus(boolean enabled) {
         reloadButton.setEnabled(enabled);
         filterButton.setEnabled(enabled);
@@ -786,6 +827,7 @@ public class MainFrame extends JFrame {
 
     /**
      * Updates the CVE table with new data.
+     *
      * @param cveList The list of CVEs to display.
      */
     public void updateCVETable(List<CVE> cveList) {
@@ -843,6 +885,9 @@ public class MainFrame extends JFrame {
         cveTable.repaint();
     }
 
+    /**
+     * Resets the CVE table to its initial state.
+     */
     public void resetCVETable() {
         cveTableModel.setRowCount(0);
         criticalCveLabel.setText("Critical CVEs: 0");
@@ -854,6 +899,7 @@ public class MainFrame extends JFrame {
 
     /**
      * Displays detailed CVE information.
+     *
      * @param cve The CVE to display.
      */
     public void showCVEInfo(CVE cve) {
@@ -861,18 +907,11 @@ public class MainFrame extends JFrame {
         cveInfoFrame.setVisible(true);  // Show the frame
     }
 
-    private JLabel createColoredLabel(String text, Color color) {
-        JLabel label = new JLabel(text);
-        label.setFont(new Font("Arial", Font.PLAIN, 16));
-        label.setForeground(color);
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        return label;
-    }
-
     /**
      * Shows a message dialog.
-     * @param message The message to display.
-     * @param title The title of the dialog.
+     *
+     * @param message     The message to display.
+     * @param title       The title of the dialog.
      * @param messageType The type of message (e.g., ERROR_MESSAGE).
      */
     public void showMessage(String message, String title, int messageType) {
@@ -883,5 +922,269 @@ public class MainFrame extends JFrame {
         updateSearchIcon();
         updateLogoutIcon();
         updatePopupMenu();
+    }
+    /**
+     * Inner class to create an animated border around a component.
+     */
+    public class AnimatedBorderPanel extends JPanel {
+        
+        private static final long serialVersionUID = 1L;
+        
+        private final Color baseColor = new Color(76, 135, 200); // Base blue color #4c87c8
+        private float alpha = 0.2f; // Starting transparency for pulsating effect
+        private boolean increasing = true; // Direction of pulsation
+        private final Timer timer;
+        private final int borderThickness = 4; // Thickness of the border
+        private final int cornerRadius = 20; // Radius for rounded corners
+
+        /**
+         * Constructor to initialize the animated border panel.
+         *
+         * @param content The child component to wrap with the animated border.
+         */
+        public AnimatedBorderPanel(JComponent content) {
+            setLayout(new BorderLayout());
+            setOpaque(false); // Make panel transparent to show animation
+            setBorder(BorderFactory.createEmptyBorder(borderThickness, borderThickness, borderThickness, borderThickness)); // Padding around content
+            add(content, BorderLayout.CENTER);
+            
+            // Initialize Timer for animation (30 FPS)
+            timer = new Timer(33, new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    updateAlpha();
+                    repaint();
+                }
+            });
+            // Initially, do not start the animation. It will be controlled externally.
+        }
+
+        /**
+         * Updates the alpha value to create a pulsating effect.
+         */
+        private void updateAlpha() {
+            if (increasing) {
+                alpha += 0.02f;
+                if (alpha >= 1.0f) {
+                    alpha = 1.0f;
+                    increasing = false;
+                }
+            } else {
+                alpha -= 0.02f;
+                if (alpha <= 0.2f) {
+                    alpha = 0.2f;
+                    increasing = true;
+                }
+            }
+        }
+
+        /**
+         * Starts the border animation.
+         */
+        public void startAnimation() {
+            timer.start();
+        }
+
+        /**
+         * Stops the border animation.
+         */
+        public void stopAnimation() {
+            timer.stop();
+            alpha = 0.2f; // Reset to default transparency
+            repaint();
+        }
+
+        /**
+         * Paints the animated border with gradient effects.
+         *
+         * @param g The Graphics object.
+         */
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            // Enable anti-aliasing for smoother graphics
+            Graphics2D g2d = (Graphics2D) g.create();
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            
+            // Calculate border dimensions
+            int width = getWidth();
+            int height = getHeight();
+            
+            // Create a gradient paint for a modern look
+            GradientPaint gradient = new GradientPaint(
+                0, 0, new Color(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), (int)(alpha * 255)),
+                width, height, new Color(baseColor.getRed(), baseColor.getGreen(), baseColor.getBlue(), (int)(alpha * 255))
+            );
+            g2d.setPaint(gradient);
+            g2d.setStroke(new BasicStroke(borderThickness));
+
+            // Draw rounded rectangle border
+            g2d.drawRoundRect(borderThickness / 2, borderThickness / 2, width - borderThickness, height - borderThickness, cornerRadius, cornerRadius);
+            
+            g2d.dispose();
+        }
+    }
+
+    /**
+     * Inner class representing a modern and enhanced About dialog for the VulnMonitor application.
+     */
+    private class AboutDialog extends JDialog {
+        
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Constructor to create the About dialog.
+         *
+         * @param owner The parent frame.
+         */
+        public AboutDialog(Frame owner) {
+            super(owner, "About VulnMonitor", true); // Modal dialog
+            initializeComponents();
+        }
+
+        /**
+         * Initializes and lays out all components within the About dialog.
+         */
+        private void initializeComponents() {
+            // Set dialog size and location
+            setSize(500, 400);
+            setLocationRelativeTo(getOwner()); // Center on parent
+
+            // Main panel with modern layout
+            JPanel mainPanel = new JPanel();
+            mainPanel.setLayout(new BorderLayout(20, 20));
+            mainPanel.setBackground(UIManager.getColor("Panel.background")); // Dynamic background
+
+            // Header with logo and title
+            JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 20));
+            headerPanel.setBackground(UIManager.getColor("Panel.background"));
+
+            // Application Logo
+            try {
+                ImageIcon logoIcon = new ImageIcon(getClass().getResource("/VulnMonitorLogo.png")); // Ensure the logo image is in the resources
+                Image logoImage = logoIcon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
+                JLabel logoLabel = new JLabel(new ImageIcon(logoImage));
+                headerPanel.add(logoLabel);
+            } catch (Exception e) {
+                // If logo not found, skip adding it
+                System.err.println("Logo image not found.");
+            }
+
+            // Application Title
+            JLabel appTitleLabel = new JLabel("VulnMonitor");
+            appTitleLabel.setFont(new Font("Segoe UI", Font.BOLD, 24));
+            appTitleLabel.setForeground(UIManager.getColor("Label.foreground")); // Dynamic text color
+            headerPanel.add(appTitleLabel);
+
+            mainPanel.add(headerPanel, BorderLayout.NORTH);
+
+            // Content Panel with information
+            JPanel contentPanel = new JPanel();
+            contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+            contentPanel.setBackground(UIManager.getColor("Panel.background"));
+
+            // Version Information
+            JLabel versionLabel = new JLabel("Version: 1.1");
+            versionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            versionLabel.setForeground(UIManager.getColor("Label.foreground"));
+            versionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            contentPanel.add(versionLabel);
+            contentPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Spacer
+
+            // Author Information
+            JLabel authorLabel = new JLabel("Author: Group 6");
+            authorLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            authorLabel.setForeground(UIManager.getColor("Label.foreground"));
+            authorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            contentPanel.add(authorLabel);
+            contentPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Spacer
+
+            // Description
+            JTextArea descriptionArea = new JTextArea("Stay up-to-date with the latest vulnerabilities to secure your systems :)");
+            descriptionArea.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            descriptionArea.setForeground(UIManager.getColor("Label.foreground"));
+            descriptionArea.setBackground(UIManager.getColor("Panel.background"));
+            descriptionArea.setWrapStyleWord(true);
+            descriptionArea.setLineWrap(true);
+            descriptionArea.setEditable(false);
+            descriptionArea.setFocusable(false);
+            descriptionArea.setAlignmentX(Component.CENTER_ALIGNMENT);
+            descriptionArea.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+            contentPanel.add(descriptionArea);
+            contentPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Spacer
+
+            // Hyperlinks Panel
+            JPanel linksPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 0));
+            linksPanel.setBackground(UIManager.getColor("Panel.background"));
+
+            // Repository Link
+            JLabel repoLink = createHyperlinkLabel("Repository", "https://github.com/0x00K1/VulnMonitor");
+            linksPanel.add(repoLink);
+
+            // User Guide Link
+            JLabel guideLink = createHyperlinkLabel("User Guide", "http://127.0.0.1/vulnmonitor/userguide");
+            linksPanel.add(guideLink);
+
+            contentPanel.add(linksPanel);
+
+            mainPanel.add(contentPanel, BorderLayout.CENTER);
+
+            // Close Button
+            JButton closeButton = new JButton("Close");
+            closeButton.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            closeButton.setPreferredSize(new Dimension(100, 40));
+            closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+            closeButton.addActionListener(_ -> dispose()); // Close the dialog on click
+            addHoverEffect(closeButton);
+            applyDynamicButtonColors(closeButton);
+
+            // Footer with Close Button
+            JPanel footerPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+            footerPanel.setBackground(UIManager.getColor("Panel.background"));
+            footerPanel.add(closeButton);
+            mainPanel.add(footerPanel, BorderLayout.SOUTH);
+
+            // Add main panel to dialog
+            add(mainPanel);
+
+            // Make the dialog non-resizable
+            setResizable(false);
+        }
+
+        /**
+         * Creates a JLabel that looks and acts like a hyperlink.
+         *
+         * @param text The text to display.
+         * @param url  The URL to open when clicked.
+         * @return A JLabel configured as a hyperlink.
+         */
+        private JLabel createHyperlinkLabel(String text, String url) {
+            JLabel hyperlink = new JLabel("<html><a href=''>" + text + "</a></html>");
+            hyperlink.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            hyperlink.setForeground(new Color(76, 135, 200)); // Blue color for links
+            hyperlink.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+            hyperlink.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    try {
+                        Desktop.getDesktop().browse(new java.net.URI(url));
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        JOptionPane.showMessageDialog(AboutDialog.this, "Unable to open link.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    hyperlink.setText("<html><a href='' style='color: #1E90FF;'>" + text + "</a></html>"); // Change color on hover
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    hyperlink.setText("<html><a href='' style='color: #4C87C8;'>" + text + "</a></html>"); // Revert color
+                }
+            });
+            return hyperlink;
+        }
     }
 }

@@ -296,7 +296,6 @@ public class FiltersFrame extends JFrame {
                 // Success callback
                 _ -> {
                     loadingDialog.dispose();
-                    JOptionPane.showMessageDialog(this, "Filters applied successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
                     dispose();
                 },
                 // Failure callback

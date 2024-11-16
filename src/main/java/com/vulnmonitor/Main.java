@@ -390,6 +390,12 @@ public class Main {
                     mainFrame.setButtonsStatus(false);
                 });
             }
+
+            SwingUtilities.invokeLater(() -> {
+                if (mainFrame != null && mainFrame.isDisplayable()) {
+                    mainFrame.animatedBorderPanel.startAnimation(); // Start the animated border
+                }
+            });
     
             currentFetchTask = CompletableFuture.runAsync(() -> {
                 if (Thread.currentThread().isInterrupted()) return;
@@ -543,6 +549,12 @@ public class Main {
         if (settingsFrame != null) {
             settingsFrame.updateFetcherButtons();
         }
+
+        SwingUtilities.invokeLater(() -> {
+            if (mainFrame != null && mainFrame.isDisplayable()) {
+                mainFrame.animatedBorderPanel.stopAnimation(); // Stop the animated border
+            }
+        });
     }
     
 
