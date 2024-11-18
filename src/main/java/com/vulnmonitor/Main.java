@@ -161,7 +161,7 @@ public class Main {
                             // Update the UI with the loaded session
                             mainFrame = new MainFrame(this, user);
                             mainFrame.setButtonsStatus(true);
-                            startCVEFetching(true);
+                            startCVEFetching(true, false);
                         });
                     } else {
                         // Session invalid or not found, create a guest user
@@ -308,7 +308,7 @@ public class Main {
                         mainFrame.setButtonsStatus(true);
 
                         // Start fetching CVE data
-                        startCVEFetching(true);
+                        startCVEFetching(true, false);
                     });
                 }).exceptionally(ex -> {
                     ex.printStackTrace();
@@ -375,9 +375,9 @@ public class Main {
      *
      * @param isManualReload True if the fetch is initiated manually by the user.
      */
-    public void startCVEFetching(final boolean isManualReload) {
+    public void startCVEFetching(final boolean isManualReload, final boolean isAutoReload) {
         // Prevent starting if already running
-        if (isFetcherRunning.compareAndSet(false, true)) {
+        if (isFetcherRunning.compareAndSet(false, true) || isAutoReload) {
             // Cancel any existing fetch operation
             if (currentFetchTask != null && !currentFetchTask.isDone()) {
                 currentFetchTask.cancel(true);
@@ -565,7 +565,7 @@ public class Main {
         int fetchInterval = user.getUserSettings().getFetchIntervalMinutes(); // Retrieve from settings
         scheduler.schedule(() -> {
             if (currentFetchTask == null || currentFetchTask.isDone()) {
-                startCVEFetching(false); // Automatic fetch (isManualReload = false)
+                startCVEFetching(false, true); // Automatic fetch (isManualReload = false, isAutoReload = true)
             }
         }, fetchInterval, TimeUnit.MINUTES); // Use dynamic interval
     }

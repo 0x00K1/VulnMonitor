@@ -480,11 +480,11 @@ public class MainFrame extends JFrame {
         reloadButton.setFocusable(false);
         reloadButton.addActionListener(_ -> {
             if (!controller.isCVEFetcherRunning()) {
-                controller.startCVEFetching(true);
+                controller.startCVEFetching(true, false);
                 animatedBorderPanel.startAnimation(); // Start border animation
             } else {
                 controller.stopCVEFetching();
-                controller.startCVEFetching(true);
+                controller.startCVEFetching(true, false);
             }
         });
 
@@ -1026,7 +1026,7 @@ public class MainFrame extends JFrame {
     }
 
     /**
-     * Inner class representing a modern and enhanced About dialog for the VulnMonitor application.
+     * Inner class representing About dialog.
      */
     private class AboutDialog extends JDialog {
         
@@ -1061,7 +1061,7 @@ public class MainFrame extends JFrame {
 
             // Application Logo
             try {
-                ImageIcon logoIcon = new ImageIcon(getClass().getResource("/VulnMonitorLogo.png")); // Ensure the logo image is in the resources
+                ImageIcon logoIcon = new ImageIcon(getClass().getClassLoader().getResource("VulnMonitorICON.png"));
                 Image logoImage = logoIcon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
                 JLabel logoLabel = new JLabel(new ImageIcon(logoImage));
                 headerPanel.add(logoLabel);

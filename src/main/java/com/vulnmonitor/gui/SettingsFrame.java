@@ -799,7 +799,7 @@ public class SettingsFrame extends JFrame {
                     // Restart Fetcher with new interval if changed
                     if (fetchIntervalChanged) {
                         controller.stopCVEFetching();
-                        controller.startCVEFetching(false);
+                        controller.startCVEFetching(true, false);
                     }
 
                     // Update the session with the new settings and filters
@@ -1326,7 +1326,7 @@ public class SettingsFrame extends JFrame {
                 JOptionPane.YES_NO_OPTION
         );
         if (confirm == JOptionPane.YES_OPTION) {
-            controller.startCVEFetching(true); // Initiates start and updates state
+            controller.startCVEFetching(true, false); // Initiates start and updates state
             updateFetcherButtons(); // Immediately update button states
             JOptionPane.showMessageDialog(this, "CVE Fetcher started successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
         }
