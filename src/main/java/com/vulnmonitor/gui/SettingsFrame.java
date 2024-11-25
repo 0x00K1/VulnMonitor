@@ -798,8 +798,10 @@ public class SettingsFrame extends JFrame {
 
                     // Restart Fetcher with new interval if changed
                     if (fetchIntervalChanged) {
-                        controller.stopCVEFetching();
-                        controller.startCVEFetching(true, false);
+                        if (controller.isCVEFetcherRunning()) {
+                            controller.stopCVEFetching();
+                            controller.startCVEFetching(true, false);
+                        }
                     }
 
                     // Update the session with the new settings and filters
@@ -850,7 +852,7 @@ public class SettingsFrame extends JFrame {
     private void handleRemoveOsForFilters() {
         String selectedOs = osList.getSelectedValue();
         if (selectedOs == null) {
-            JOptionPane.showMessageDialog(this, "Please select an OS to remove.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Select an OS to remove.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         if (selectedOs.equals("ALL")) {
@@ -890,7 +892,7 @@ public class SettingsFrame extends JFrame {
     private void handleRemoveProductForFilters() {
         List<String> selectedProducts = productList.getSelectedValuesList();
         if (selectedProducts.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please select Products to remove.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Select Products to remove.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         if (selectedProducts.contains("ALL")) {
@@ -932,7 +934,7 @@ public class SettingsFrame extends JFrame {
     private void handleRemoveOsForAlerts() {
         String selectedOs = alertOsList.getSelectedValue();
         if (selectedOs == null) {
-            JOptionPane.showMessageDialog(this, "Please select an OS to remove from Alerts.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Select an OS to remove from Alerts.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         if (selectedOs.equals("ALL")) {
@@ -986,7 +988,7 @@ public class SettingsFrame extends JFrame {
     private void handleRemoveProductForAlerts() {
         String selectedProduct = alertProductList.getSelectedValue();
         if (selectedProduct == null) {
-            JOptionPane.showMessageDialog(this, "Please select a Product to remove from Alerts.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Select a Product to remove from Alerts.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         if (selectedProduct.equals("ALL")) {
@@ -1048,7 +1050,7 @@ public class SettingsFrame extends JFrame {
     private void deleteSelectedNotifications(JTable table, NotificationTableModel tableModel) {
         int[] selectedRows = table.getSelectedRows();
         if (selectedRows.length == 0) {
-            JOptionPane.showMessageDialog(this, "Please select at least one notification to delete.", "No Selection", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Select at least one notification to delete.", "No Selection", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -1116,7 +1118,7 @@ public class SettingsFrame extends JFrame {
                 .thenAccept(exists -> {
                     SwingUtilities.invokeLater(() -> {
                         if (exists) {
-                            JOptionPane.showMessageDialog(this, "Username already exists. Please choose another.", "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(this, "Username already exists. Choose another.", "Error", JOptionPane.ERROR_MESSAGE);
                         } else {
                             // Proceed to update the username
                             updateUsername(newUsername);
@@ -1194,7 +1196,7 @@ public class SettingsFrame extends JFrame {
                 .thenAccept(exists -> {
                     SwingUtilities.invokeLater(() -> {
                         if (exists) {
-                            JOptionPane.showMessageDialog(this, "Email already exists. Please choose another.", "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(this, "Email already exists. Choose another.", "Error", JOptionPane.ERROR_MESSAGE);
                         } else {
                             // Proceed to update the email
                             updateEmail(newEmail);

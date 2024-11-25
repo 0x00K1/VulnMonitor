@@ -367,7 +367,7 @@ public class ArchivesFrame extends JFrame {
         if (row == -1) {
             JOptionPane.showMessageDialog(
                     this,
-                    "Please select a CVE to unarchive.",
+                    "Select a CVE to unarchive.",
                     "No Selection",
                     JOptionPane.WARNING_MESSAGE
             );
@@ -423,7 +423,7 @@ public class ArchivesFrame extends JFrame {
         if (row == -1) {
             JOptionPane.showMessageDialog(
                     this,
-                    "Please select a CVE to view details.",
+                    "Select a CVE to view details.",
                     "No Selection",
                     JOptionPane.WARNING_MESSAGE
             );

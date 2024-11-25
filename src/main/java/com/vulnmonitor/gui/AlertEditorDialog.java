@@ -193,7 +193,7 @@ public class AlertEditorDialog extends JDialog {
     private void saveAlert() {
         String name = nameField.getText().trim();
         if (name.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please enter an alert name.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Enter an alert name.", "Input Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 

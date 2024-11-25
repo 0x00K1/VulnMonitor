@@ -1,12 +1,12 @@
 package com.vulnmonitor;
 
-import com.formdev.flatlaf.FlatDarkLaf;
-import com.formdev.flatlaf.FlatLightLaf;
 import com.vulnmonitor.gui.*;
 import com.vulnmonitor.model.*;
 import com.vulnmonitor.services.*;
 import com.vulnmonitor.utils.*;
 
+import com.formdev.flatlaf.FlatDarkLaf;
+import com.formdev.flatlaf.FlatLightLaf;
 import javax.swing.*;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
@@ -628,7 +628,7 @@ public class Main {
 
                 if (apiCveList == null) {
                     loadingDialog.dispose();
-                    SwingUtilities.invokeLater(() -> mainFrame.showMessage("An error occurred while searching for CVEs. Please try again later.", "Search Error", JOptionPane.ERROR_MESSAGE));
+                    SwingUtilities.invokeLater(() -> mainFrame.showMessage("An error occurred while searching for CVEs. Try again later.", "Search Error", JOptionPane.ERROR_MESSAGE));
                     return;
                 } else if (apiCveList.isEmpty()) {
                     loadingDialog.dispose();
@@ -760,7 +760,7 @@ public class Main {
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane.showMessageDialog(
                             mainFrame,
-                            "You have reached the maximum archive limit (" + Constants.MAX_ARCHIVED_CVES_ALLOWED + "). Please unarchive some CVEs before archiving new ones.",
+                            "You have reached the maximum archive limit (" + Constants.MAX_ARCHIVED_CVES_ALLOWED + "). Unarchive some CVEs before archiving new ones.",
                             "Archive Limit Reached",
                             JOptionPane.WARNING_MESSAGE
                     );
@@ -959,7 +959,7 @@ public class Main {
         if (!user.isLoggedIn()) {
             JOptionPane.showMessageDialog(
                     mainFrame,
-                    "Please log in to access archives.",
+                    "Log in to access archives.",
                     "Access Denied",
                     JOptionPane.WARNING_MESSAGE
             );
@@ -983,7 +983,7 @@ public class Main {
         if (!user.isLoggedIn()) {
             JOptionPane.showMessageDialog(
                     mainFrame,
-                    "Please log in to access settings.",
+                    "Log in to access settings.",
                     "Access Denied",
                     JOptionPane.WARNING_MESSAGE
             );

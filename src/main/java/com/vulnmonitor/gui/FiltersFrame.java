@@ -240,15 +240,15 @@ public class FiltersFrame extends JFrame {
         boolean includeRejected = includeRejectedCheckBox.isSelected();
 
         if (selectedOS == null || selectedOS.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please select an operating system.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Select an operating system.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         if (selectedSeverity == null || selectedSeverity.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please select a severity level.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Select a severity level.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         if (selectedProducts == null || selectedProducts.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please select at least one product.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Select at least one product.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 

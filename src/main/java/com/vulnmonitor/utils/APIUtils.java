@@ -65,23 +65,25 @@ public class APIUtils {
                 HttpRequest request = requestBuilder.build();
                 HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
+                System.out.println(response);
+
                 if (response.statusCode() == 200) {
                     result = response.body();
                     break; // Success, exit the loop
                 } else if (response.statusCode() == 503) {
-                    System.out.println("Received 503 Service Unavailable. Attempt " + attempt + " of " + maxRetries);
+                    // System.out.println("Received 503 Service Unavailable. Attempt " + attempt + " of " + maxRetries);
                     if (attempt == maxRetries) {
                         throw new IOException("Max retries reached. Server is unavailable.");
                     }
                     TimeUnit.SECONDS.sleep(retryDelay);
                     retryDelay *= 2; // Exponential backoff
                 } else {
-                    System.out.println("Error: " + response.statusCode());
-                    System.out.println("Response: " + response.body());
+                    // System.out.println("Error: " + response.statusCode());
+                    // System.out.println("Response: " + response.body());
                     break; // For other errors, do not retry
                 }
             } catch (HttpConnectTimeoutException e) {
-                System.out.println("Connect timeout occurred. Retrying... (" + attempt + "/" + maxRetries + ")");
+                // System.out.println("Connect timeout occurred. Retrying... (" + attempt + "/" + maxRetries + ")");
                 if (attempt == maxRetries) {
                     System.err.println("Failed after " + maxRetries + " attempts: Connection timeout.");
                 }

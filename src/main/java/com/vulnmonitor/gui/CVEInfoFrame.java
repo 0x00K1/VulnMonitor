@@ -126,7 +126,6 @@ public class CVEInfoFrame extends JFrame {
         addOverviewRow(overviewPanel, gbc, "State:", handleNull(cve.getState()), 3);
         addOverviewRow(overviewPanel, gbc, "Date Reserved:", handleNull(formatDate(cve.getDateReserved())), 4);
         addOverviewRow(overviewPanel, gbc, "Date Updated:", handleNull(formatDate(cve.getDateUpdated())), 5);
-        addOverviewRow(overviewPanel, gbc, "Archived At:", handleNull(formatDate(cve.getArchivedAt())), 6);
 
         return overviewPanel;
     }
@@ -488,20 +487,6 @@ public class CVEInfoFrame extends JFrame {
             // If parsing fails, return the original string
             return dateStr;
         }
-    }
-
-    /**
-     * Formats Date objects into a readable string.
-     *
-     * @param date The Date object to format.
-     * @return Formatted date string or "N/A" if null.
-     */
-    private String formatDate(java.util.Date date) {
-        if (date == null) {
-            return "N/A";
-        }
-        SimpleDateFormat outputFormat = new SimpleDateFormat("dd MMM yyyy HH:mm:ss");
-        return outputFormat.format(date);
     }
 
     /**

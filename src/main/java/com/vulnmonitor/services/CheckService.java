@@ -41,16 +41,16 @@ public class CheckService {
      */
     public boolean performInitialCheck() {
         if (!isInternetAvailable()) {
-            showErrorAndExit("Failed to establish an internet connection. Please check your network settings and ensure you have a stable connection. The application will exit.", "Connection Error");
+            showErrorAndExit("Failed to establish an internet connection. Check your network settings and ensure you have a stable connection. The application will exit.", "Connection Error");
             return false;
         } else if (!isSystemDateCorrect()) {
-            showErrorAndExit("Detected incorrect system date/time. Please adjust your system clock to the correct date and time. The application will exit.", "Date Error");
+            showErrorAndExit("Detected incorrect system date/time. Adjust your system clock to the correct date and time. The application will exit.", "Date Error");
             return false;
         } else if (!isDatabaseConnected()) {
-            showErrorAndExit("Failed to establish a connection to the database. Please check your database configuration. The application will exit.", "Database Error");
+            showErrorAndExit("Failed to establish a connection to the database. Check your database configuration. The application will exit.", "Database Error");
             return false;
         } else if (!isFetcherApiValid()) {
-            showErrorAndExit("Failed to validate the NVD API or the Fetcher URL. Please check your API and fetcher settings. The application will exit.", "API Error");
+            showErrorAndExit("Failed to validate the NVD API or the Fetcher URL. Check your API and fetcher Configurations. The application will exit.", "API Error");
             return false;
         }
         return true; // All checks passed
@@ -87,11 +87,11 @@ public class CheckService {
                 if (internetFailures >= maxConsecutiveFailures) {
                     showErrorAndExit("Internet connection lost. The application will exit.", "Connection Error");
                 } else if (dateFailures >= maxConsecutiveFailures) {
-                    showErrorAndExit("System date/time detected as incorrect. Please correct it to continue using the application. The application will exit.", "Date Error");
+                    showErrorAndExit("System date/time detected as incorrect. Correct it to continue using the application. The application will exit.", "Date Error");
                 } else if (dbFailures >= maxConsecutiveFailures) {
-                    showErrorAndExit("Database connection lost. Please check your database configuration. The application will exit.", "Database Error");
+                    showErrorAndExit("Database connection lost. Check your database configuration. The application will exit.", "Database Error");
                 } else if (apiFailures >= maxConsecutiveFailures) {
-                    showErrorAndExit("NVD API or Fetcher URL validation failed. Please check your API and fetcher settings. The application will exit.", "API Error");
+                    showErrorAndExit("NVD API or Fetcher URL validation failed. Check your API and fetcher configurations. The application will exit.", "API Error");
                 }
             } catch (Exception e) {
                 e.printStackTrace();
