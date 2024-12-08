@@ -147,6 +147,8 @@ src/
 │   └── Main.java          # Entry point of the application
 db/
 └── MainQuery.sql          # Database schema
+│
+web/                       # Web Interface
 ```
 
 
