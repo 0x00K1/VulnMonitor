@@ -10,16 +10,16 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 
 ## 📑 Table of Contents
 
-- [Features](#features)
-- [Technologies Used](#technologies-used)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Project Structure](#project-structure)
-- [System Architecture](#system-architecture)
+- [⭐ Features](#features)
+- [🛠️ Technologies Used](#technologies-used)
+- [📥 Installation](#installation)
+- [🚀 Usage](#usage)
+- [📂 Project Structure](#project-structure)
+- [🖥️ System Architecture](#system-architecture)
 
 ---
 
-## Features
+## ⭐ Features
 
 - **📡 Real-Time CVE Monitoring**: Fetches the latest CVEs every 15 minutes (adjustable).
 - **🔍 Customizable Filters**: Filter CVEs by severity, affected product, or other criteria.
@@ -31,7 +31,7 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 
 ---
 
-## Technologies Used
+## 🛠️ Technologies Used
 
 ```bash
 1. Programming Language: Java (for backend and GUI development)
@@ -39,21 +39,22 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 3. Database: MySQL
 4. API Integration: RESTful APIs for fetching CVE data (e.g., NVD, MITRE)
 5. Email Service: JavaMail API with MailerSend
-6. Web Components: HTML, CSS, JS, PHP (for account registration)
+6. Web Components: HTML, CSS, JS, PHP (for account registration and guides)
 ```
 
 ---
 
-## Installation
+## 📥 Installation
 
 ### Prerequisites
 
 ```bash
 1. Java JDK (version 17 or higher)
 2. MySQL Server
-3. Internet connection to fetch CVE data
-4. A code editor or IDE (e.g., VSCode, Eclipse)
-5. MailerSend account for email configuration
+3. PHP and Apache (or a similar web server)
+4. Internet connection to fetch CVE data
+5. A code editor or IDE (e.g., VSCode, Eclipse)
+6. MailerSend account for email configuration
 ```
 
 ### Steps
@@ -65,7 +66,20 @@ git clone https://github.com/0x00K1/VulnMonitor.git
 cd VulnMonitor
 ```
 
-2. Configure the database:
+2. Configure the database for the web components:
+
+   - Open the `web/db.php` file and update the database credentials:
+
+     ```php
+     <?php
+     $servername = "localhost";
+     $username = "your_username";
+     $password = "your_password";
+     $dbname = "vulnmonitor";
+     ?>
+     ```
+
+3. Configure the database for the application:
 
    - Create a MySQL database named `vulnmonitor`:
 
@@ -79,7 +93,7 @@ cd VulnMonitor
    mysql -u root -p vulnmonitor < MainQuery.sql
    ```
 
-3. Update database credentials in the configuration file:
+4. Update database credentials in the application configuration:
 
    ```java
    // File: src/com/vulnmonitor/services/DatabaseService.java
@@ -88,18 +102,14 @@ cd VulnMonitor
    public static final String DB_PASSWORD = "your_password";
    ```
 
-4. Update your API key:
-
-   - Open the `APIUtils` class and replace the `API_KEY` value with your API key obtained from [NVD API Key Request Page](https://nvd.nist.gov/developers/request-an-api-key):
+5. Update your API key for CVE fetching:
 
    ```java
    // File: src/com/vulnmonitor/utils/APIUtils.java
    private static final String API_KEY = "your-api-key-here";
    ```
 
-5. Configure the email service:
-
-   - Open the `EmailService` class and replace the placeholders for `username` and `password` with your MailerSend credentials obtained from [MailerSend](https://app.mailersend.com):
+6. Configure the email service:
 
    ```java
    // File: src/com/vulnmonitor/services/EmailService.java
@@ -109,7 +119,7 @@ cd VulnMonitor
    private final String password = "your_mailersend_password";
    ```
 
-6. Build and run the application:
+7. Build and run the application:
 
 ```bash
 javac -cp . com/vulnmonitor/Main.java
@@ -118,7 +128,7 @@ java -cp . com.vulnmonitor.Main
 
 ---
 
-## Usage
+## 🚀 Usage
 
 ```bash
 1. Launch the application.
@@ -131,7 +141,7 @@ java -cp . com.vulnmonitor.Main
 
 ---
 
-## Project Structure
+## 📂 Project Structure
 
 ```plaintext
 src/
@@ -147,7 +157,7 @@ db/
 
 ---
 
-## System Architecture
+## 🖥️ System Architecture
 <p align="center">
   <img src="repo/SysArch.svg" alt="System Architecture">
 </p>
