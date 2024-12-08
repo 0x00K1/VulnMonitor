@@ -2,22 +2,11 @@
   <img src="repo/ICON.png" alt="Icon">
 </p>
 
-# 🛡️ VulnMonitor | Demo
+# 🛡️ VulnMonitor  |  Demo
 
 VulnMonitor is a robust desktop application designed to streamline the monitoring of Common Vulnerabilities and Exposures (CVEs). This tool helps users stay informed about security threats relevant to their software environment by providing real-time tracking, customizable filters, and alert notifications.
 
----
 
-## 📑 Table of Contents
-
-- [⭐ Features](#features)
-- [🛠️ Technologies Used](#technologies-used)
-- [📥 Installation](#installation)
-- [🚀 Usage](#usage)
-- [📂 Project Structure](#project-structure)
-- [🖥️ System Architecture](#system-architecture)
-
----
 
 ## ⭐ Features
 
@@ -29,7 +18,7 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 - **🖥️ Background Operation**: Runs silently in the background and starts with the system.
 - **🔐 Secure Storage**: Stores user data and preferences securely in a MySQL database.
 
----
+
 
 ## 🛠️ Technologies Used
 
@@ -39,10 +28,10 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 3. Database: MySQL
 4. API Integration: RESTful APIs for fetching CVE data (e.g., NVD, MITRE)
 5. Email Service: JavaMail API with MailerSend
-6. Web Components: HTML, CSS, JS, PHP (for account registration and guides)
+6. Web Components: HTML, CSS, JS, PHP
 ```
 
----
+
 
 ## 📥 Installation
 
@@ -126,7 +115,7 @@ javac -cp . com/vulnmonitor/Main.java
 java -cp . com.vulnmonitor.Main
 ```
 
----
+
 
 ## 🚀 Usage
 
@@ -139,7 +128,7 @@ java -cp . com.vulnmonitor.Main
 6. Use the settings menu to customize preferences such as appearance or refresh intervals.
 ```
 
----
+
 
 ## 📂 Project Structure
 
@@ -154,7 +143,6 @@ src/
 db/
 └── MainQuery.sql          # Database schema
 ```
-
 ---
 
 ## 🖥️ System Architecture
