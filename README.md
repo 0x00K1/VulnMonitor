@@ -8,6 +8,7 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 
 
 
+
 ## ⭐ Features
 
 - **📡 Real-Time CVE Monitoring**: Fetches the latest CVEs every 15 minutes (adjustable).
@@ -17,6 +18,7 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 - **⚙️ User Preferences**: Dark mode, customizable settings, and persistent preferences.
 - **🖥️ Background Operation**: Runs silently in the background and starts with the system.
 - **🔐 Secure Storage**: Stores user data and preferences securely in a MySQL database.
+
 
 
 
@@ -30,6 +32,7 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 5. Email Service: JavaMail API with MailerSend
 6. Web Components: HTML, CSS, JS, PHP
 ```
+
 
 
 
@@ -117,6 +120,7 @@ java -cp . com.vulnmonitor.Main
 
 
 
+
 ## 🚀 Usage
 
 ```bash
@@ -127,6 +131,7 @@ java -cp . com.vulnmonitor.Main
 5. Set up alerts for critical vulnerabilities.
 6. Use the settings menu to customize preferences such as appearance or refresh intervals.
 ```
+
 
 
 
@@ -143,7 +148,9 @@ src/
 db/
 └── MainQuery.sql          # Database schema
 ```
----
+
+
+
 
 ## 🖥️ System Architecture
 <p align="center">
