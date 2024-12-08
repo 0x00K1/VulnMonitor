@@ -2,7 +2,7 @@
   <img src="repo/ICON.png" alt="Icon">
 </p>
 
-# 🛡️ VulnMonitor
+# 🛡️ VulnMonitor | Demo
 
 VulnMonitor is a robust desktop application designed to streamline the monitoring of Common Vulnerabilities and Exposures (CVEs). This tool helps users stay informed about security threats relevant to their software environment by providing real-time tracking, customizable filters, and alert notifications.
 
@@ -10,16 +10,16 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 
 ## 📑 Table of Contents
 
-- [⭐ Features](#features)
-- [🛠️ Technologies Used](#technologies-used)
-- [📥 Installation](#installation)
-- [🚀 Usage](#usage)
-- [📂 Project Structure](#project-structure)
-- [🖥️ System Architecture](#system-architecture)
+- [Features](#features)
+- [Technologies Used](#technologies-used)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [System Architecture](#system-architecture)
 
 ---
 
-## ⭐ Features
+## Features
 
 - **📡 Real-Time CVE Monitoring**: Fetches the latest CVEs every 15 minutes (adjustable).
 - **🔍 Customizable Filters**: Filter CVEs by severity, affected product, or other criteria.
@@ -31,7 +31,7 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 
 ---
 
-## 🛠️ Technologies Used
+## Technologies Used
 
 ```bash
 1. Programming Language: Java (for backend and GUI development)
@@ -44,7 +44,7 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 
 ---
 
-## 📥 Installation
+## Installation
 
 ### Prerequisites
 
@@ -118,7 +118,7 @@ java -cp . com.vulnmonitor.Main
 
 ---
 
-## 🚀 Usage
+## Usage
 
 ```bash
 1. Launch the application.
@@ -131,7 +131,7 @@ java -cp . com.vulnmonitor.Main
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```plaintext
 src/
@@ -147,7 +147,7 @@ db/
 
 ---
 
-## 🖥️ System Architecture
+## System Architecture
 <p align="center">
   <img src="repo/SysArch.svg" alt="System Architecture">
 </p>
