@@ -2,7 +2,7 @@
   <img src="repo/ICON.png" alt="Icon">
 </p>
 
-# 🛡️ VulnMonitor | Desktop CVE Tracking and Notification System
+# 🛡️ VulnMonitor
 
 VulnMonitor is a robust desktop application designed to streamline the monitoring of Common Vulnerabilities and Exposures (CVEs). This tool helps users stay informed about security threats relevant to their software environment by providing real-time tracking, customizable filters, and alert notifications.
 
@@ -127,8 +127,8 @@ src/
 │   ├── services/          # Services (e.g., API, database)
 │   ├── utils/             # Utility classes
 │   └── Main.java          # Entry point of the application
-resources/
-└── schema.sql             # Database schema
+db/
+└── MainQuery.sql             # Database schema
 ```
 
 ---
