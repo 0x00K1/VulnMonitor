@@ -2,7 +2,7 @@
   <img src="repo/ICON.png" alt="Icon">
 </p>
 
-<h1 align="center"># VulnMonitor  |  Demo</h1>
+<h1 align="center">VulnMonitor  |  Demo</h1>
 
 VulnMonitor is a robust desktop application designed to streamline the monitoring of Common Vulnerabilities and Exposures (CVEs). This tool helps users stay informed about security threats relevant to their software environment by providing real-time tracking, customizable filters, and alert notifications.
 
