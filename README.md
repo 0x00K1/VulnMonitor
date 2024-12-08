@@ -38,7 +38,8 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 2. UI Framework: Swing
 3. Database: MySQL
 4. API Integration: RESTful APIs for fetching CVE data (e.g., NVD, MITRE)
-5. Web Components: HTML, CSS, JS, PHP (for account registration)
+5. Email Service: JavaMail API with MailerSend
+6. Web Components: HTML, CSS, JS, PHP (for account registration)
 ```
 
 ---
@@ -52,6 +53,7 @@ VulnMonitor is a robust desktop application designed to streamline the monitorin
 2. MySQL Server
 3. Internet connection to fetch CVE data
 4. A code editor or IDE (e.g., VSCode, Eclipse)
+5. MailerSend account for email configuration
 ```
 
 ### Steps
@@ -95,7 +97,19 @@ cd VulnMonitor
    private static final String API_KEY = "your-api-key-here";
    ```
 
-5. Build and run the application:
+5. Configure the email service:
+
+   - Open the `EmailService` class and replace the placeholders for `username` and `password` with your MailerSend credentials obtained from [MailerSend](https://app.mailersend.com):
+
+   ```java
+   // File: src/com/vulnmonitor/services/EmailService.java
+   private final String smtpHost = "smtp.mailersend.net";
+   private final String smtpPort = "587";
+   private final String username = "your_mailersend_username";
+   private final String password = "your_mailersend_password";
+   ```
+
+6. Build and run the application:
 
 ```bash
 javac -cp . com/vulnmonitor/Main.java
@@ -124,11 +138,11 @@ src/
 ├── com.vulnmonitor/
 │   ├── gui/               # Graphical user interface components
 │   ├── model/             # Data models
-│   ├── services/          # Services (e.g., API, database)
+│   ├── services/          # Services (e.g., API, database, email)
 │   ├── utils/             # Utility classes
 │   └── Main.java          # Entry point of the application
 db/
-└── MainQuery.sql             # Database schema
+└── MainQuery.sql          # Database schema
 ```
 
 ---
